@@ -1,10 +1,10 @@
-import torch
 import numpy as np
+import torch
 import torch.nn as nn
-from timm.models.layers import trunc_normal_
 import torch.utils.checkpoint as checkpoint
-from .components import MLP
-from .components import timestep_embedding
+from timm.models.layers import trunc_normal_
+
+from .components import MLP, timestep_embedding
 from .PhysicsAttention import Physics_Attention_Structured_Mesh_3D
 
 

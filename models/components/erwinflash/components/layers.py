@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import torch
 import torch.nn as nn
-from typing import Literal
 
 from .attention import BallMSA
 from .mlp import SwiGLU

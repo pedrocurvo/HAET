@@ -1,8 +1,9 @@
-from setuptools import setup, Extension
-from Cython.Build import cythonize
-import numpy
 import os
 import platform
+
+import numpy
+from Cython.Build import cythonize
+from setuptools import Extension, setup
 
 extra_compile_args = ["-O3", "-std=c++11"]
 extra_link_args = []

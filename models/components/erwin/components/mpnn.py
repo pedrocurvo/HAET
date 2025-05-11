@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
+from typing import List, Literal
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch_cluster
-from einops import rearrange, reduce
-
-from typing import Literal, List
-from dataclasses import dataclass
-
 from balltree import build_balltree_with_rotations
+from einops import rearrange, reduce
 
 
 def scatter_mean(src: torch.Tensor, idx: torch.Tensor, num_receivers: int):

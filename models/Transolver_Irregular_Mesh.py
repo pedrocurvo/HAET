@@ -1,9 +1,9 @@
+import numpy as np
 import torch
 import torch.nn as nn
 from timm.models.layers import trunc_normal_
-import numpy as np
-from .components import timestep_embedding
-from .components import MLP
+
+from .components import MLP, timestep_embedding
 from .PhysicsAttention import Physics_Attention_Irregular_Mesh
 
 

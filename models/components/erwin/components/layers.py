@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Literal
-from components.mpnn import MPNN
-from components.pooling import BallPooling, BallUnpooling
-from components.node import Node
+
 from components.attention import BallMSA
+from components.mpnn import MPNN
+from components.node import Node
+from components.pooling import BallPooling, BallUnpooling
 
 
 class SwiGLU(nn.Module):

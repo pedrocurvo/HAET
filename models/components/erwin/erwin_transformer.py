@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from typing import List
+
 import torch
 import torch.nn as nn
 import torch_cluster
-
-from typing import List
 from balltree import build_balltree_with_rotations
-from components import ErwinEmbedding, Node, BasicLayer
+
+from components import BasicLayer, ErwinEmbedding, Node
 
 
 class ErwinTransformer(nn.Module):

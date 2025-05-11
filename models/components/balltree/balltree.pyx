@@ -6,13 +6,15 @@
 # cython: language_level=3
 
 import math
-import torch
+
 import numpy as np
+import torch
+
 cimport numpy as cnp
-from libcpp cimport bool
-from libc.math cimport ceil, log2
-from libc.stdlib cimport malloc, free
 from cython.parallel cimport parallel, prange
+from libc.math cimport ceil, log2
+from libc.stdlib cimport free, malloc
+from libcpp cimport bool
 from openmp cimport omp_get_max_threads, omp_set_num_threads
 
 cnp.import_array()
