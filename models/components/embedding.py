@@ -5,23 +5,23 @@ from einops import rearrange
 
 
 class RotaryEmbedding(nn.Module):
-    def __init__(self, dim, min_freq=1 / 2, scale=1.):
+    def __init__(self, dim, min_freq=1 / 2, scale=1.0):
         super().__init__()
-        inv_freq = 1. / (10000 ** (torch.arange(0, dim, 2).float() / dim))
+        inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2).float() / dim))
         self.min_freq = min_freq
         self.scale = scale
-        self.register_buffer('inv_freq', inv_freq)
+        self.register_buffer("inv_freq", inv_freq)
 
     def forward(self, coordinates, device):
         # coordinates [b, n]
         t = coordinates.to(device).type_as(self.inv_freq)
         t = t * (self.scale / self.min_freq)
-        freqs = torch.einsum('... i , j -> ... i j', t, self.inv_freq)  # [b, n, d//2]
+        freqs = torch.einsum("... i , j -> ... i j", t, self.inv_freq)  # [b, n, d//2]
         return torch.cat((freqs, freqs), dim=-1)  # [b, n, d]
 
 
 def rotate_half(x):
-    x = rearrange(x, '... (j d) -> ... j d', j=2)
+    x = rearrange(x, "... (j d) -> ... j d", j=2)
     x1, x2 = x.unbind(dim=-2)
     return torch.cat((-x2, x1), dim=-1)
 
@@ -35,10 +35,11 @@ def apply_2d_rotary_pos_emb(t, freqs_x, freqs_y):
     # t: [b, h, n, d]
     # freq_x/y: [b, n, d]
     d = t.shape[-1]
-    t_x, t_y = t[..., :d // 2], t[..., d // 2:]
+    t_x, t_y = t[..., : d // 2], t[..., d // 2 :]
 
-    return torch.cat((apply_rotary_pos_emb(t_x, freqs_x),
-                      apply_rotary_pos_emb(t_y, freqs_y)), dim=-1)
+    return torch.cat(
+        (apply_rotary_pos_emb(t_x, freqs_x), apply_rotary_pos_emb(t_y, freqs_y)), dim=-1
+    )
 
 
 class PositionalEncoding(nn.Module):
@@ -76,7 +77,9 @@ def timestep_embedding(timesteps, dim, max_period=10000, repeat_only=False):
 
     half = dim // 2
     freqs = torch.exp(
-        -math.log(max_period) * torch.arange(start=0, end=half, dtype=torch.float32) / half
+        -math.log(max_period)
+        * torch.arange(start=0, end=half, dtype=torch.float32)
+        / half
     ).to(device=timesteps.device)
     args = timesteps[:, None].float() * freqs[None]
     embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)

@@ -1,11 +1,19 @@
 import torch.nn as nn
 
-ACTIVATION = {'gelu': nn.GELU, 'tanh': nn.Tanh, 'sigmoid': nn.Sigmoid, 'relu': nn.ReLU, 'leaky_relu': nn.LeakyReLU(0.1),
-              'softplus': nn.Softplus, 'ELU': nn.ELU, 'silu': nn.SiLU}
+ACTIVATION = {
+    "gelu": nn.GELU,
+    "tanh": nn.Tanh,
+    "sigmoid": nn.Sigmoid,
+    "relu": nn.ReLU,
+    "leaky_relu": nn.LeakyReLU(0.1),
+    "softplus": nn.Softplus,
+    "ELU": nn.ELU,
+    "silu": nn.SiLU,
+}
 
 
 class MLP(nn.Module):
-    def __init__(self, n_input, n_hidden, n_output, n_layers=1, act='gelu', res=True):
+    def __init__(self, n_input, n_hidden, n_output, n_layers=1, act="gelu", res=True):
         super(MLP, self).__init__()
 
         if act in ACTIVATION.keys():
@@ -19,7 +27,12 @@ class MLP(nn.Module):
         self.res = res
         self.linear_pre = nn.Sequential(nn.Linear(n_input, n_hidden), act())
         self.linear_post = nn.Linear(n_hidden, n_output)
-        self.linears = nn.ModuleList([nn.Sequential(nn.Linear(n_hidden, n_hidden), act()) for _ in range(n_layers)])
+        self.linears = nn.ModuleList(
+            [
+                nn.Sequential(nn.Linear(n_hidden, n_hidden), act())
+                for _ in range(n_layers)
+            ]
+        )
 
     def forward(self, x):
         x = self.linear_pre(x)
