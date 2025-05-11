@@ -178,3 +178,9 @@ data/
 
 # wandb
 wandb/
+
+# metrics
+metrics/
+
+# results
+results/
