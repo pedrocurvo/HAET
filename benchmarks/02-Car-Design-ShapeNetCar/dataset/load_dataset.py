@@ -3,7 +3,7 @@ from dataset.dataset import get_datalist
 
 
 def get_samples(root):
-    folds = [f'param{i}' for i in range(9)]
+    folds = [f"param{i}" for i in range(9)]
     samples = []
     for fold in folds:
         fold_samples = []
@@ -28,10 +28,20 @@ def load_train_val_fold(args, preprocessed):
     if preprocessed:
         print("use preprocessed data")
     print("loading data")
-    train_dataset, coef_norm = get_datalist(args.data_dir, trainlst, norm=True, savedir=args.save_dir,
-                                            preprocessed=preprocessed)
-    val_dataset = get_datalist(args.data_dir, vallst, coef_norm=coef_norm, savedir=args.save_dir,
-                               preprocessed=preprocessed)
+    train_dataset, coef_norm = get_datalist(
+        args.data_dir,
+        trainlst,
+        norm=True,
+        savedir=args.save_dir,
+        preprocessed=preprocessed,
+    )
+    val_dataset = get_datalist(
+        args.data_dir,
+        vallst,
+        coef_norm=coef_norm,
+        savedir=args.save_dir,
+        preprocessed=preprocessed,
+    )
     print("load data finish")
     return train_dataset, val_dataset, coef_norm
 
@@ -48,9 +58,19 @@ def load_train_val_fold_file(args, preprocessed):
     if preprocessed:
         print("use preprocessed data")
     print("loading data")
-    train_dataset, coef_norm = get_datalist(args.data_dir, trainlst, norm=True, savedir=args.save_dir,
-                                            preprocessed=preprocessed)
-    val_dataset = get_datalist(args.data_dir, vallst, coef_norm=coef_norm, savedir=args.save_dir,
-                               preprocessed=preprocessed)
+    train_dataset, coef_norm = get_datalist(
+        args.data_dir,
+        trainlst,
+        norm=True,
+        savedir=args.save_dir,
+        preprocessed=preprocessed,
+    )
+    val_dataset = get_datalist(
+        args.data_dir,
+        vallst,
+        coef_norm=coef_norm,
+        savedir=args.save_dir,
+        preprocessed=preprocessed,
+    )
     print("load data finish")
     return train_dataset, val_dataset, coef_norm, vallst

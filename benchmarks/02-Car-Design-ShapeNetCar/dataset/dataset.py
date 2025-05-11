@@ -36,7 +36,9 @@ def get_sdf(target, boundary):
 
 
 def get_normal(unstructured_grid_data):
-    poly_data, surface_filter = unstructured_grid_data_to_poly_data(unstructured_grid_data)
+    poly_data, surface_filter = unstructured_grid_data_to_poly_data(
+        unstructured_grid_data
+    )
     # visualize_poly_data(poly_data, surface_filter)
     # poly_data.GetPointData().SetScalars(None)
     normal_filter = vtk.vtkPolyDataNormals()
@@ -47,7 +49,7 @@ def get_normal(unstructured_grid_data):
     normal_filter.SetComputeCellNormals(1)
     normal_filter.SetComputePointNormals(0)
     normal_filter.Update()
-    '''
+    """
     normal_filter.SetComputeCellNormals(0)
     normal_filter.SetComputePointNormals(1)
     normal_filter.Update()
@@ -59,9 +61,11 @@ def get_normal(unstructured_grid_data):
     p2c.Update()
     unstructured_grid_data.GetCellData().SetNormals(p2c.GetOutput().GetCellData().GetNormals())
     #visualize_poly_data(poly_data, surface_filter, p2c)
-    '''
+    """
 
-    unstructured_grid_data.GetCellData().SetNormals(normal_filter.GetOutput().GetCellData().GetNormals())
+    unstructured_grid_data.GetCellData().SetNormals(
+        normal_filter.GetOutput().GetCellData().GetNormals()
+    )
     c2p = vtk.vtkCellDataToPointData()
     # c2p.ProcessAllArraysOn()
     c2p.SetInputData(unstructured_grid_data)
@@ -70,8 +74,8 @@ def get_normal(unstructured_grid_data):
     # return unstructured_grid_data
     normal = vtk_to_numpy(c2p.GetOutput().GetPointData().GetNormals()).astype(np.double)
     # print(np.max(np.max(np.abs(normal), axis=1)), np.min(np.max(np.abs(normal), axis=1)))
-    normal /= (np.max(np.abs(normal), axis=1, keepdims=True) + 1e-8)
-    normal /= (np.linalg.norm(normal, axis=1, keepdims=True) + 1e-8)
+    normal /= np.max(np.abs(normal), axis=1, keepdims=True) + 1e-8
+    normal /= np.linalg.norm(normal, axis=1, keepdims=True) + 1e-8
     if np.isnan(normal).sum() > 0:
         print(np.isnan(normal).sum())
         print("recalculate")
@@ -137,7 +141,9 @@ def visualize_poly_data(poly_data, surface_filter, normal_filter=None):
     interactor.Start()
 
 
-def get_datalist(root, samples, norm=False, coef_norm=None, savedir=None, preprocessed=False):
+def get_datalist(
+    root, samples, norm=False, coef_norm=None, savedir=None, preprocessed=False
+):
     dataset = []
     mean_in, mean_out = 0, 0
     std_in, std_out = 0, 0
@@ -146,35 +152,49 @@ def get_datalist(root, samples, norm=False, coef_norm=None, savedir=None, prepro
             save_path = os.path.join(savedir, s)
             if not os.path.exists(save_path):
                 continue
-            init = np.load(os.path.join(save_path, 'x.npy'))
-            target = np.load(os.path.join(save_path, 'y.npy'))
-            pos = np.load(os.path.join(save_path, 'pos.npy'))
-            surf = np.load(os.path.join(save_path, 'surf.npy'))
-            edge_index = np.load(os.path.join(save_path, 'edge_index.npy'))
+            init = np.load(os.path.join(save_path, "x.npy"))
+            target = np.load(os.path.join(save_path, "y.npy"))
+            pos = np.load(os.path.join(save_path, "pos.npy"))
+            surf = np.load(os.path.join(save_path, "surf.npy"))
+            edge_index = np.load(os.path.join(save_path, "edge_index.npy"))
         else:
-            file_name_press = os.path.join(root, os.path.join(s, 'quadpress_smpl.vtk'))
-            file_name_velo = os.path.join(root, os.path.join(s, 'hexvelo_smpl.vtk'))
+            file_name_press = os.path.join(root, os.path.join(s, "quadpress_smpl.vtk"))
+            file_name_velo = os.path.join(root, os.path.join(s, "hexvelo_smpl.vtk"))
 
-            if not os.path.exists(file_name_press) or not os.path.exists(file_name_velo):
+            if not os.path.exists(file_name_press) or not os.path.exists(
+                file_name_velo
+            ):
                 continue
 
             unstructured_grid_data_press = load_unstructured_grid_data(file_name_press)
             unstructured_grid_data_velo = load_unstructured_grid_data(file_name_velo)
 
             velo = vtk_to_numpy(unstructured_grid_data_velo.GetPointData().GetVectors())
-            press = vtk_to_numpy(unstructured_grid_data_press.GetPointData().GetScalars())
-            points_velo = vtk_to_numpy(unstructured_grid_data_velo.GetPoints().GetData())
-            points_press = vtk_to_numpy(unstructured_grid_data_press.GetPoints().GetData())
+            press = vtk_to_numpy(
+                unstructured_grid_data_press.GetPointData().GetScalars()
+            )
+            points_velo = vtk_to_numpy(
+                unstructured_grid_data_velo.GetPoints().GetData()
+            )
+            points_press = vtk_to_numpy(
+                unstructured_grid_data_press.GetPoints().GetData()
+            )
 
-            edges_press = get_edges(unstructured_grid_data_press, points_press, cell_size=4)
-            edges_velo = get_edges(unstructured_grid_data_velo, points_velo, cell_size=8)
+            edges_press = get_edges(
+                unstructured_grid_data_press, points_press, cell_size=4
+            )
+            edges_velo = get_edges(
+                unstructured_grid_data_velo, points_velo, cell_size=8
+            )
 
             sdf_velo, normal_velo = get_sdf(points_velo, points_press)
             sdf_press = np.zeros(points_press.shape[0])
             normal_press = get_normal(unstructured_grid_data_press)
 
             surface = {tuple(p) for p in points_press}
-            exterior_indices = [i for i, p in enumerate(points_velo) if tuple(p) not in surface]
+            exterior_indices = [
+                i for i, p in enumerate(points_velo) if tuple(p) not in surface
+            ]
             velo_dict = {tuple(p): velo[i] for i, p in enumerate(points_velo)}
 
             pos_ext = points_velo[exterior_indices]
@@ -184,7 +204,12 @@ def get_datalist(root, samples, norm=False, coef_norm=None, savedir=None, prepro
             normal_ext = normal_velo[exterior_indices]
             normal_surf = normal_press
             velo_ext = velo[exterior_indices]
-            velo_surf = np.array([velo_dict[tuple(p)] if tuple(p) in velo_dict else np.zeros(3) for p in pos_surf])
+            velo_surf = np.array(
+                [
+                    velo_dict[tuple(p)] if tuple(p) in velo_dict else np.zeros(3)
+                    for p in pos_surf
+                ]
+            )
             press_ext = np.zeros([len(exterior_indices), 1])
             press_surf = press
 
@@ -203,11 +228,11 @@ def get_datalist(root, samples, norm=False, coef_norm=None, savedir=None, prepro
                 save_path = os.path.join(savedir, s)
                 if not os.path.exists(save_path):
                     os.makedirs(save_path)
-                np.save(os.path.join(save_path, 'x.npy'), init)
-                np.save(os.path.join(save_path, 'y.npy'), target)
-                np.save(os.path.join(save_path, 'pos.npy'), pos)
-                np.save(os.path.join(save_path, 'surf.npy'), surf)
-                np.save(os.path.join(save_path, 'edge_index.npy'), edge_index)
+                np.save(os.path.join(save_path, "x.npy"), init)
+                np.save(os.path.join(save_path, "y.npy"), target)
+                np.save(os.path.join(save_path, "pos.npy"), pos)
+                np.save(os.path.join(save_path, "surf.npy"), surf)
+                np.save(os.path.join(save_path, "edge_index.npy"), edge_index)
 
         surf = torch.tensor(surf)
         pos = torch.tensor(pos)
@@ -237,10 +262,14 @@ def get_datalist(root, samples, norm=False, coef_norm=None, savedir=None, prepro
                 std_out = ((data.y.numpy() - mean_out) ** 2).sum(axis=0) / old_length
             else:
                 new_length = old_length + data.x.numpy().shape[0]
-                std_in += (((data.x.numpy() - mean_in) ** 2).sum(axis=0) - data.x.numpy().shape[
-                    0] * std_in) / new_length
-                std_out += (((data.y.numpy() - mean_out) ** 2).sum(axis=0) - data.x.numpy().shape[
-                    0] * std_out) / new_length
+                std_in += (
+                    ((data.x.numpy() - mean_in) ** 2).sum(axis=0)
+                    - data.x.numpy().shape[0] * std_in
+                ) / new_length
+                std_out += (
+                    ((data.y.numpy() - mean_out) ** 2).sum(axis=0)
+                    - data.x.numpy().shape[0] * std_out
+                ) / new_length
                 old_length = new_length
 
         std_in = np.sqrt(std_in)
@@ -263,7 +292,9 @@ def get_datalist(root, samples, norm=False, coef_norm=None, savedir=None, prepro
 
 def get_edges(unstructured_grid_data, points, cell_size=4):
     edge_indeces = set()
-    cells = vtk_to_numpy(unstructured_grid_data.GetCells().GetData()).reshape(-1, cell_size + 1)
+    cells = vtk_to_numpy(unstructured_grid_data.GetCells().GetData()).reshape(
+        -1, cell_size + 1
+    )
     for i in range(len(cells)):
         for j, k in itertools.product(range(1, cell_size + 1), repeat=2):
             edge_indeces.add((cells[i][j], cells[i][k]))
@@ -287,15 +318,16 @@ def get_edge_index(pos, edges_press, edges_velo):
 
 
 def get_induced_graph(data, idx, num_hops):
-    subset, sub_edge_index, _, _ = k_hop_subgraph(node_idx=idx, num_hops=num_hops, edge_index=data.edge_index,
-                                                  relabel_nodes=True)
+    subset, sub_edge_index, _, _ = k_hop_subgraph(
+        node_idx=idx, num_hops=num_hops, edge_index=data.edge_index, relabel_nodes=True
+    )
     return Data(x=data.x[subset], y=data.y[idx], edge_index=sub_edge_index)
 
 
 def pc_normalize(pc):
     centroid = torch.mean(pc, axis=0)
     pc = pc - centroid
-    m = torch.max(torch.sqrt(torch.sum(pc ** 2, axis=1)))
+    m = torch.max(torch.sqrt(torch.sum(pc**2, axis=1)))
     pc = pc / m
     return pc
 
@@ -313,14 +345,19 @@ def get_shape(data, max_n_point=8192, normalize=True, use_height=False):
 
     if use_height:
         gravity_dim = 1
-        height_array = shape_pc[:, gravity_dim:gravity_dim + 1] - shape_pc[:, gravity_dim:gravity_dim + 1].min()
+        height_array = (
+            shape_pc[:, gravity_dim : gravity_dim + 1]
+            - shape_pc[:, gravity_dim : gravity_dim + 1].min()
+        )
         shape_pc = torch.cat((shape_pc, height_array), axis=1)
 
     return shape_pc
 
 
 def create_edge_index_radius(data, r, max_neighbors=32):
-    data.edge_index = nng.radius_graph(x=data.pos, r=r, loop=True, max_num_neighbors=max_neighbors)
+    data.edge_index = nng.radius_graph(
+        x=data.pos, r=r, loop=True, max_num_neighbors=max_neighbors
+    )
     # print(f'r = {r}, #edges = {data.edge_index.size(1)}')
     return data
 
@@ -344,15 +381,15 @@ class GraphDataset(Dataset):
         return self.datalist[idx], shape
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import numpy as np
 
-    file_name = '1a0bc9ab92c915167ae33d942430658c'
+    file_name = "1a0bc9ab92c915167ae33d942430658c"
 
-    root = '/data/PDE_data/mlcfd_data/training_data'
-    save_path = '/data/PDE_data/mlcfd_data/preprocessed_data/param0/' + file_name
-    file_name_press = 'param0/' + file_name + '/quadpress_smpl.vtk'
-    file_name_velo = 'param0/' + file_name + '/hexvelo_smpl.vtk'
+    root = "/data/PDE_data/mlcfd_data/training_data"
+    save_path = "/data/PDE_data/mlcfd_data/preprocessed_data/param0/" + file_name
+    file_name_press = "param0/" + file_name + "/quadpress_smpl.vtk"
+    file_name_velo = "param0/" + file_name + "/hexvelo_smpl.vtk"
     file_name_press = os.path.join(root, file_name_press)
     file_name_velo = os.path.join(root, file_name_velo)
     unstructured_grid_data_press = load_unstructured_grid_data(file_name_press)
@@ -381,7 +418,12 @@ if __name__ == '__main__':
     normal_ext = normal_velo[exterior_indices]
     normal_surf = normal_press
     velo_ext = velo[exterior_indices]
-    velo_surf = np.array([velo_dict[tuple(p)] if tuple(p) in velo_dict else np.zeros(3) for p in pos_surf])
+    velo_surf = np.array(
+        [
+            velo_dict[tuple(p)] if tuple(p) in velo_dict else np.zeros(3)
+            for p in pos_surf
+        ]
+    )
     press_ext = np.zeros([len(exterior_indices), 1])
     press_surf = press
 
