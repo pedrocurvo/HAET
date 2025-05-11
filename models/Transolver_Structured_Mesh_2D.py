@@ -11,26 +11,40 @@ class Transolver_block(nn.Module):
     """Transformer encoder block."""
 
     def __init__(
-            self,
-            num_heads: int,
-            hidden_dim: int,
-            dropout: float,
-            act='gelu',
-            mlp_ratio=4,
-            last_layer=False,
-            out_dim=1,
-            slice_num=32,
-            H=85,
-            W=85
+        self,
+        num_heads: int,
+        hidden_dim: int,
+        dropout: float,
+        act="gelu",
+        mlp_ratio=4,
+        last_layer=False,
+        out_dim=1,
+        slice_num=32,
+        H=85,
+        W=85,
     ):
         super().__init__()
         self.last_layer = last_layer
         self.ln_1 = nn.LayerNorm(hidden_dim)
-        self.Attn = Physics_Attention_Structured_Mesh_2D(hidden_dim, heads=num_heads, dim_head=hidden_dim // num_heads,
-                                                         dropout=dropout, slice_num=slice_num, H=H, W=W)
+        self.Attn = Physics_Attention_Structured_Mesh_2D(
+            hidden_dim,
+            heads=num_heads,
+            dim_head=hidden_dim // num_heads,
+            dropout=dropout,
+            slice_num=slice_num,
+            H=H,
+            W=W,
+        )
 
         self.ln_2 = nn.LayerNorm(hidden_dim)
-        self.mlp = MLP(hidden_dim, hidden_dim * mlp_ratio, hidden_dim, n_layers=0, res=False, act=act)
+        self.mlp = MLP(
+            hidden_dim,
+            hidden_dim * mlp_ratio,
+            hidden_dim,
+            n_layers=0,
+            res=False,
+            act=act,
+        )
         if self.last_layer:
             self.ln_3 = nn.LayerNorm(hidden_dim)
             self.mlp2 = nn.Linear(hidden_dim, out_dim)
@@ -45,53 +59,79 @@ class Transolver_block(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self,
-                 space_dim=1,
-                 n_layers=5,
-                 n_hidden=256,
-                 dropout=0.0,
-                 n_head=8,
-                 Time_Input=False,
-                 act='gelu',
-                 mlp_ratio=1,
-                 fun_dim=1,
-                 out_dim=1,
-                 slice_num=32,
-                 ref=8,
-                 unified_pos=False,
-                 H=85,
-                 W=85,
-                 ):
+    def __init__(
+        self,
+        space_dim=1,
+        n_layers=5,
+        n_hidden=256,
+        dropout=0.0,
+        n_head=8,
+        Time_Input=False,
+        act="gelu",
+        mlp_ratio=1,
+        fun_dim=1,
+        out_dim=1,
+        slice_num=32,
+        ref=8,
+        unified_pos=False,
+        H=85,
+        W=85,
+    ):
         super(Model, self).__init__()
-        self.__name__ = 'Transolver_2D'
+        self.__name__ = "Transolver_2D"
         self.H = H
         self.W = W
         self.ref = ref
         self.unified_pos = unified_pos
         if self.unified_pos:
             self.pos = self.get_grid()
-            self.preprocess = MLP(fun_dim + self.ref * self.ref, n_hidden * 2, n_hidden, n_layers=0, res=False, act=act)
+            self.preprocess = MLP(
+                fun_dim + self.ref * self.ref,
+                n_hidden * 2,
+                n_hidden,
+                n_layers=0,
+                res=False,
+                act=act,
+            )
         else:
-            self.preprocess = MLP(fun_dim + space_dim, n_hidden * 2, n_hidden, n_layers=0, res=False, act=act)
+            self.preprocess = MLP(
+                fun_dim + space_dim,
+                n_hidden * 2,
+                n_hidden,
+                n_layers=0,
+                res=False,
+                act=act,
+            )
 
         self.Time_Input = Time_Input
         self.n_hidden = n_hidden
         self.space_dim = space_dim
         if Time_Input:
-            self.time_fc = nn.Sequential(nn.Linear(n_hidden, n_hidden), nn.SiLU(), nn.Linear(n_hidden, n_hidden))
+            self.time_fc = nn.Sequential(
+                nn.Linear(n_hidden, n_hidden), nn.SiLU(), nn.Linear(n_hidden, n_hidden)
+            )
 
-        self.blocks = nn.ModuleList([Transolver_block(num_heads=n_head, hidden_dim=n_hidden,
-                                                      dropout=dropout,
-                                                      act=act,
-                                                      mlp_ratio=mlp_ratio,
-                                                      out_dim=out_dim,
-                                                      slice_num=slice_num,
-                                                      H=H,
-                                                      W=W,
-                                                      last_layer=(_ == n_layers - 1))
-                                     for _ in range(n_layers)])
+        self.blocks = nn.ModuleList(
+            [
+                Transolver_block(
+                    num_heads=n_head,
+                    hidden_dim=n_hidden,
+                    dropout=dropout,
+                    act=act,
+                    mlp_ratio=mlp_ratio,
+                    out_dim=out_dim,
+                    slice_num=slice_num,
+                    H=H,
+                    W=W,
+                    last_layer=(_ == n_layers - 1),
+                )
+                for _ in range(n_layers)
+            ]
+        )
         self.initialize_weights()
-        self.placeholder = nn.Parameter((1 / (n_hidden)) * torch.rand(n_hidden, dtype=torch.float))
+        self.placeholder = nn.Parameter(
+            (1 / (n_hidden)) * torch.rand(n_hidden, dtype=torch.float)
+        )
 
     def initialize_weights(self):
         self.apply(self._init_weights)
@@ -119,13 +159,24 @@ class Model(nn.Module):
         gridy = gridy.reshape(1, 1, self.ref, 1).repeat([batchsize, self.ref, 1, 1])
         grid_ref = torch.cat((gridx, gridy), dim=-1).cuda()  # B H W 8 8 2
 
-        pos = torch.sqrt(torch.sum((grid[:, :, :, None, None, :] - grid_ref[:, None, None, :, :, :]) ** 2, dim=-1)). \
-            reshape(batchsize, size_x, size_y, self.ref * self.ref).contiguous()
+        pos = (
+            torch.sqrt(
+                torch.sum(
+                    (grid[:, :, :, None, None, :] - grid_ref[:, None, None, :, :, :])
+                    ** 2,
+                    dim=-1,
+                )
+            )
+            .reshape(batchsize, size_x, size_y, self.ref * self.ref)
+            .contiguous()
+        )
         return pos
 
     def forward(self, x, fx, T=None):
         if self.unified_pos:
-            x = self.pos.repeat(x.shape[0], 1, 1, 1).reshape(x.shape[0], self.H * self.W, self.ref * self.ref)
+            x = self.pos.repeat(x.shape[0], 1, 1, 1).reshape(
+                x.shape[0], self.H * self.W, self.ref * self.ref
+            )
         if fx is not None:
             fx = torch.cat((x, fx), -1)
             fx = self.preprocess(fx)

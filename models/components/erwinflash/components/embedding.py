@@ -8,7 +8,7 @@ from .mpnn import MPNN
 
 
 def scatter_mean(src: torch.Tensor, idx: torch.Tensor, num_receivers: int):
-    """ 
+    """
     Averages all values from src into the receivers at the indices specified by idx.
     Uses torch_scatter's optimized implementation.
 
@@ -16,7 +16,7 @@ def scatter_mean(src: torch.Tensor, idx: torch.Tensor, num_receivers: int):
         src (torch.Tensor): Source tensor of shape (N, D).
         idx (torch.Tensor): Indices tensor of shape (N,).
         num_receivers (int): Number of receivers (usually the maximum index in idx + 1).
-    
+
     Returns:
         torch.Tensor: Result tensor of shape (num_receivers, D).
     """
@@ -24,7 +24,8 @@ def scatter_mean(src: torch.Tensor, idx: torch.Tensor, num_receivers: int):
 
 
 class ErwinEmbedding(nn.Module):
-    """ Linear projection -> MPNN."""
+    """Linear projection -> MPNN."""
+
     def __init__(self, in_dim: int, dim: int, mp_steps: int, dimensionality: int = 3):
         super().__init__()
         self.mp_steps = mp_steps
