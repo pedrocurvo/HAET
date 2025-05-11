@@ -4,8 +4,10 @@ import torch.nn as nn
 
 from .mpnn import MPNN
 
+
 class ErwinEmbedding(nn.Module):
-    """ Linear projection -> MPNN."""
+    """Linear projection -> MPNN."""
+
     def __init__(self, in_dim: int, dim: int, mp_steps: int, dimensionality: int = 3):
         super().__init__()
         self.mp_steps = mp_steps

@@ -6,6 +6,12 @@ from .node import Node
 from .pooling import BallPooling, BallUnpooling
 
 __all__ = [
-    "ErwinEmbedding", "MPNN", "BasicLayer", "ErwinTransformerBlock",
-    "BallMSA", "BallPooling", "BallUnpooling", "Node"
+    "ErwinEmbedding",
+    "MPNN",
+    "BasicLayer",
+    "ErwinTransformerBlock",
+    "BallMSA",
+    "BallPooling",
+    "BallUnpooling",
+    "Node",
 ]
