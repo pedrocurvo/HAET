@@ -7,6 +7,7 @@ from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 import psutil
 from pathlib import Path
+from torch.cuda.amp import autocast, GradScaler
 
 
 def get_nb_trainable_params(model):
@@ -62,6 +63,9 @@ def train(device, model, train_loader, optimizer, scheduler, reg=1):
     batch_times = []
     total_batches = len(train_loader)
     
+    # Initialize gradient scaler for AMP
+    scaler = GradScaler()
+    
     for batch_idx, (cfd_data, geom) in enumerate(train_loader):
         batch_start = time.time()
         
@@ -69,27 +73,30 @@ def train(device, model, train_loader, optimizer, scheduler, reg=1):
         geom = geom.to(device)
         optimizer.zero_grad()
         
-        # Forward pass with gradient computation timing
+        # Forward pass with gradient computation timing and AMP autocast
         forward_start = time.time()
-        out = model((cfd_data, geom))
+        with autocast():
+            out = model((cfd_data, geom))
+            targets = cfd_data.y
+
+            loss_press = criterion_func(out[cfd_data.surf, -1], targets[cfd_data.surf, -1]).mean(dim=0)
+            loss_velo_var = criterion_func(out[:, :-1], targets[:, :-1]).mean(dim=0)
+            loss_velo = loss_velo_var.mean()
+            total_loss = loss_velo + reg * loss_press
         forward_time = time.time() - forward_start
-        
-        targets = cfd_data.y
 
-        loss_press = criterion_func(out[cfd_data.surf, -1], targets[cfd_data.surf, -1]).mean(dim=0)
-        loss_velo_var = criterion_func(out[:, :-1], targets[:, :-1]).mean(dim=0)
-        loss_velo = loss_velo_var.mean()
-        total_loss = loss_velo + reg * loss_press
-
-        # Backward pass with gradient computation timing
+        # Backward pass with gradient computation timing and AMP scaler
         backward_start = time.time()
-        total_loss.backward()
-        backward_time = time.time() - backward_start
-
-        # Gradient clipping
+        scaler.scale(total_loss).backward()
+        
+        # Gradient clipping with scaler
+        scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         
-        optimizer.step()
+        scaler.step(optimizer)
+        scaler.update()
+        backward_time = time.time() - backward_start
+
         scheduler.step()
 
         losses_press.append(loss_press.item())
@@ -143,12 +150,15 @@ def test(device, model, test_loader):
     for cfd_data, geom in test_loader:
         cfd_data = cfd_data.to(device)
         geom = geom.to(device)
-        out = model((cfd_data, geom))
-        targets = cfd_data.y
+        
+        # Use autocast for validation as well for consistent precision
+        with autocast():
+            out = model((cfd_data, geom))
+            targets = cfd_data.y
 
-        loss_press = criterion_func(out[cfd_data.surf, -1], targets[cfd_data.surf, -1]).mean(dim=0)
-        loss_velo_var = criterion_func(out[:, :-1], targets[:, :-1]).mean(dim=0)
-        loss_velo = loss_velo_var.mean()
+            loss_press = criterion_func(out[cfd_data.surf, -1], targets[cfd_data.surf, -1]).mean(dim=0)
+            loss_velo_var = criterion_func(out[:, :-1], targets[:, :-1]).mean(dim=0)
+            loss_velo = loss_velo_var.mean()
 
         losses_press.append(loss_press.item())
         losses_velo.append(loss_velo.item())
@@ -190,6 +200,7 @@ def main(device, train_dataset, val_dataset, Net, hparams, path, reg=1, val_iter
             "device": device,
             "early_stopping_patience": 7,
             "gradient_clip_norm": 1.0,
+            "amp_enabled": True,  # Log AMP usage
         }
     )
     
