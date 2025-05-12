@@ -8,8 +8,8 @@ from dataset.dataset import GraphDataset
 from models.Transolver import Model
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--data_dir', default='/data/PDE_data/mlcfd_data/training_data')
-parser.add_argument('--save_dir', default='/data/PDE_data/mlcfd_data/preprocessed_data')
+parser.add_argument('--data_dir', default='/data/shapenet_car/mlcfd_data/training_data')
+parser.add_argument('--save_dir', default='/data/shapenet_car/mlcfd_data/preprocessed_data')
 parser.add_argument('--fold_id', default=0, type=int)
 parser.add_argument('--gpu', default=0, type=int)
 parser.add_argument('--val_iter', default=10, type=int)
