@@ -6,10 +6,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from components.attention import BallMSA
-from components.mpnn import MPNN
-from components.node import Node
-from components.pooling import BallPooling, BallUnpooling
+from .attention import BallMSA
+from .mpnn import MPNN
+from .node import Node
+from .pooling import BallPooling, BallUnpooling
 
 
 class SwiGLU(nn.Module):

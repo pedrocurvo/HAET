@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .embedding import scatter_mean
+from .utils import scatter_mean
 
 
 class MPNN(nn.Module):

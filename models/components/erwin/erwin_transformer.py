@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch_cluster
 from balltree import build_balltree_with_rotations
 
-from components import BasicLayer, ErwinEmbedding, Node
+from .components import BasicLayer, ErwinEmbedding, Node
 
 
 class ErwinTransformer(nn.Module):

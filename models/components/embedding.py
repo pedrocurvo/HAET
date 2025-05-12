@@ -68,12 +68,22 @@ class PositionalEncoding(nn.Module):
 
 def timestep_embedding(timesteps, dim, max_period=10000, repeat_only=False):
     """
-    Create sinusoidal timestep embeddings.
-    :param timesteps: a 1-D Tensor of N indices, one per batch element.
-                      These may be fractional.
-    :param dim: the dimension of the output.
-    :param max_period: controls the minimum frequency of the embeddings.
-    :return: an [N x dim] Tensor of positional embeddings.
+    Create sinusoidal timestep embeddings for time-dependent problems.
+
+    This function converts time values into a high-dimensional representation
+    using sinusoidal functions at different frequencies, similar to positional
+    encodings in Transformers. This allows the model to understand the temporal
+    aspect of the data.
+
+    Args:
+        timesteps: A 1-D Tensor of N time indices, one per batch element.
+                  These may be fractional.
+        dim: The dimension of the output embeddings.
+        max_period: Controls the minimum frequency of the embeddings.
+        repeat_only: If True, only repeats the input without sinusoidal encoding.
+
+    Returns:
+        An [N x dim] Tensor of time embeddings.
     """
 
     half = dim // 2
