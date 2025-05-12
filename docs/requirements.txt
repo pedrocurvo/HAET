@@ -1,2 +1,15 @@
-sphinx==7.1.2
-sphinx-rtd-theme==1.3.0rc1
+sphinx>=7.1.2
+sphinx-rtd-theme>=1.3.0
+myst-parser>=0.15.0
+docutils>=0.16
+Jinja2>=3.0.0
+sphinxcontrib-applehelp>=1.0.0
+sphinxcontrib-devhelp>=1.0.0
+sphinxcontrib-htmlhelp>=2.0.0
+sphinxcontrib-jsmath>=1.0.0
+sphinxcontrib-serializinghtml>=1.0.0
+sphinxcontrib-qthelp>=1.0.0
+# Mock these packages for ReadTheDocs
+# torch
+# numpy
+# einops

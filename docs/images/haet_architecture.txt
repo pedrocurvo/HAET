@@ -1,0 +1,11 @@
+# Architecture Diagram for HAET
+
+This is a placeholder for the architecture diagram. Replace this file with an actual diagram showing:
+
+1. Input mesh processing
+2. Token slicing 
+3. Virtual cube embedding
+4. Hierarchical ball attention
+5. Output processing
+
+The diagram should illustrate how Transolver and Erwin components are integrated.
