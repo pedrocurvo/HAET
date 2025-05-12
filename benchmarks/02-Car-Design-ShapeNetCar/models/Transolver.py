@@ -7,7 +7,8 @@ from einops import rearrange, repeat
 ACTIVATION = {'gelu': nn.GELU, 'tanh': nn.Tanh, 'sigmoid': nn.Sigmoid, 'relu': nn.ReLU, 'leaky_relu': nn.LeakyReLU(0.1),
               'softplus': nn.Softplus, 'ELU': nn.ELU, 'silu': nn.SiLU}
 
-from ....models.components import ErwinTransformer
+
+from ....models.components import ErwinFlashTransformer as ErwinTransformer
 
 class ErwinTransolver(nn.Module):
     """Combines Transolver's token slicing with Erwin's hierarchical processing.
@@ -90,7 +91,7 @@ class ErwinTransolver(nn.Module):
         
         # Create slice tokens through weighted aggregation
         slice_token = torch.einsum("bhnc,bhng->bhgc", fx_mid, slice_weights)
-        slice_token = slice_token / (slice_norm + 1e-5)  # [B, H, G, C]
+        slice_token = slice_token / (slice_norm.transpose(-1, -2) + 1e-5)  # [B, H, G, C]
         
         # Process slice tokens with Erwin
         # Shape explanation:
