@@ -4,6 +4,12 @@
 
 <b> Authors: </b> <a href="https://pedrocurvo.com/">Pedro M. P. Curvo</a>, <a href="https://www.google.com">Mohammadmahdi Rahimi</a>, <a href="https://www.google.com">Salvador Torpes</a>
 
+<p align="center">
+	<img src="https://img.shields.io/github/license/pedrocurvo/ErwinTransolver" alt="license">
+	<img src="https://img.shields.io/badge/python-3.8%2B-blue" alt="python-version">
+	<img src="https://img.shields.io/badge/PointClouds,%20PDESolver,%20Transformer,%20more-blue" alt="topics">
+</p>
+
 </div>
 
 ## Introduction
