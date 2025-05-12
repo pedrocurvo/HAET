@@ -7,7 +7,7 @@ from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 import psutil
 from pathlib import Path
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 
 
 def get_nb_trainable_params(model):
@@ -64,7 +64,7 @@ def train(device, model, train_loader, optimizer, scheduler, reg=1):
     total_batches = len(train_loader)
     
     # Initialize gradient scaler for AMP
-    scaler = GradScaler()
+    scaler = GradScaler('cuda')
     
     for batch_idx, (cfd_data, geom) in enumerate(train_loader):
         batch_start = time.time()
@@ -75,7 +75,7 @@ def train(device, model, train_loader, optimizer, scheduler, reg=1):
         
         # Forward pass with gradient computation timing and AMP autocast
         forward_start = time.time()
-        with autocast():
+        with autocast('cuda'):
             out = model((cfd_data, geom))
             targets = cfd_data.y
 
@@ -152,7 +152,7 @@ def test(device, model, test_loader):
         geom = geom.to(device)
         
         # Use autocast for validation as well for consistent precision
-        with autocast():
+        with autocast('cuda'):
             out = model((cfd_data, geom))
             targets = cfd_data.y
 
