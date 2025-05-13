@@ -11,8 +11,8 @@ ACTIVATION = {'gelu': nn.GELU, 'tanh': nn.Tanh, 'sigmoid': nn.Sigmoid, 'relu': n
 from ....models.components import ErwinFlashTransformer as ErwinTransformer
 
 class ErwinTransolver(nn.Module):
-    """Combines Transolver's token slicing with Erwin's hierarchical processing.
-    Instead of using attention between slice tokens, uses a Erwin network.
+    """Combines Transolver++'s slicing with adaptive temperature and eidetic states with Erwin's hierarchical processing.
+    Implements the Transolver++ algorithm (Algorithm 1) with Eidetic States, using Rep-Slice and Ada-Temp mechanisms.
     """
     def __init__(
         self, 
@@ -21,7 +21,9 @@ class ErwinTransolver(nn.Module):
         heads: int = 8,
         dim_head: int = 64,
         dropout: float = 0.0,
-        dimensionality: int = 3
+        dimensionality: int = 3,
+        base_temp: float = 0.5,
+        epsilon: float = 1e-6  # For the log(-log(ε)) term in Rep-Slice
     ):
         super().__init__()
         inner_dim = dim_head * heads
@@ -29,17 +31,20 @@ class ErwinTransolver(nn.Module):
         self.heads = heads
         self.slice_num = slice_num
         self.dimensionality = dimensionality
+        self.epsilon = epsilon
         
-        # Input projections for slicing
+        # Input projections for slicing (just x, not fx to save 50% memory as per algorithm)
         self.in_project_x = nn.Linear(dim, inner_dim)
-        self.in_project_fx = nn.Linear(dim, inner_dim)
+        
+        # Rep-Slice projection
         self.in_project_slice = nn.Linear(dim_head, slice_num)
         nn.init.orthogonal_(self.in_project_slice.weight)
         
-        # Temperature parameter for slice weights
-        self.temperature = nn.Parameter(torch.ones([1, heads, 1, 1]) * 0.5)
+        # Ada-Temp: Base temperature + adaptive component
+        self.base_temp = base_temp
+        self.ada_temp_linear = nn.Linear(dim_head, 1)  # Adaptive temperature adjustment
         
-        # Erwin network for processing slice tokens
+        # Erwin network for processing eidetic states
         self.erwin = ErwinTransformer(
             c_in=dim_head,
             c_hidden=[dim_head, dim_head*2],  # Two levels of hierarchy
@@ -62,72 +67,70 @@ class ErwinTransolver(nn.Module):
             nn.Dropout(dropout)
         )
         
-        self.dropout = nn.Dropout(dropout)
-        self.softmax = nn.Softmax(dim=-1)
+
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
+        Implements Transolver++ Algorithm 1: Parallel Physics-Attention with Eidetic States
+        
         Args:
             x: Input tensor of shape (B, N, C) where:
                B = batch size
                N = number of points
                C = number of channels/features
         Returns:
-            Reduced tensor of shape (B, slice_num, C)
+            Updated tensor of shape (B, N, C)
         """
         B, N, C = x.shape
         
-        # Project inputs
-        fx_mid = self.in_project_fx(x).reshape(B, N, self.heads, self.dim_head).permute(0, 2, 1, 3)
-        x_mid = self.in_project_x(x).reshape(B, N, self.heads, self.dim_head).permute(0, 2, 1, 3)
+        # Project input - note we don't compute fx separately to save memory
+        x_proj = self.in_project_x(x).reshape(B, N, self.heads, self.dim_head).permute(0, 2, 1, 3)
         
-        # Compute slice weights with temperature scaling
-        slice_weights = self.softmax(
-            self.in_project_slice(x_mid) / torch.clamp(self.temperature, min=0.1, max=5)
-        )
+        # Compute adaptive temperature (Ada-Temp): τ = τ0 + Linear(xi)
+        # Implementation: τ(k) ←τ0 + Ada-Temp(x(k))
+        adaptive_temp = self.base_temp + self.ada_temp_linear(x_proj).clamp(min=-0.4, max=0.4)
         
-        # Normalize slice weights
+        # Compute Rep-Slice: Softmax(Linear(x) - log(-log(ε))) / τ
+        # Implementation: w(k) ← Rep-Slice(x(k),τ(k))
+        log_neg_log_epsilon = torch.log(-torch.log(torch.tensor(self.epsilon, device=x.device)))
+        slice_logits = self.in_project_slice(x_proj) - log_neg_log_epsilon
+        slice_weights = torch.softmax(slice_logits / adaptive_temp, dim=2)
+        
+        # Compute weights norm: w(k)_norm ← sum_i(w(k)_i)
         slice_norm = slice_weights.sum(2, keepdim=True)
         
-        # Create slice tokens through weighted aggregation
-        slice_token = torch.einsum("bhnc,bhng->bhgc", fx_mid, slice_weights)
-        slice_token = slice_token / (slice_norm.transpose(-1, -2) + 1e-5)  # [B, H, G, C]
+        # Compute eidetic states: s(k) ← w(k)T x(k) / w_norm
+        # We use x_proj both as x and f to save memory
+        eidetic_states = torch.einsum("bhnc,bhng->bhgc", x_proj, slice_weights)
+        eidetic_states = eidetic_states / (slice_norm.transpose(-1, -2) + 1e-5)  # [B, H, G, C]
         
-        # Process slice tokens with Erwin
-        # Shape explanation:
-        # B: batch size (number of samples in the batch)
-        # H: number of attention heads
-        # G: number of slice tokens (slice_num)
-        # C: channels per head (dim_head)
-        B, H, G, C = slice_token.shape
+        # Process eidetic states with Erwin (attention mechanism)
+        # This corresponds to: Update eidetic states s′← Attention(s)
+        B, H, G, C = eidetic_states.shape
         
-        # We use Erwin to compute attention between slice tokens. Each slice token represents
-        # a weighted aggregation of the input features. By applying Erwin, we allow these slice tokens
-        # to interact with each other through hierarchical ball attention, effectively capturing
-        # multi-scale relationships between different regions of the input.
+        # Reshape for Erwin: [B, H, G, C] -> [B*H*G, C]
+        eidetic_states_flat = eidetic_states.reshape(B*H*G, C)
         
-        # Reshape for Erwin: [B*H, G, C] -> [B*H*G, C]
-        slice_token = slice_token.reshape(B*H*G, C)  # Flatten to [total_points, channels]
-        
-        # Create artificial positions for slice tokens (uniformly distributed in unit cube)
-        pos = torch.rand(B*H*G, self.dimensionality, device=x.device)  # [total_points, dims]
+        # Create artificial positions for eidetic states (uniformly distributed in unit cube)
+        pos = torch.rand(B*H*G, self.dimensionality, device=x.device)
         
         # Create batch indices - each slice token needs its own batch index
         batch_idx = torch.arange(B*H, device=x.device).repeat_interleave(G)
         
         # Add safety checks
-        assert slice_token.shape[0] == pos.shape[0] == batch_idx.shape[0], \
-            f"Shapes mismatch: features {slice_token.shape}, pos {pos.shape}, batch {batch_idx.shape}"
+        assert eidetic_states_flat.shape[0] == pos.shape[0] == batch_idx.shape[0], \
+            f"Shapes mismatch: features {eidetic_states_flat.shape}, pos {pos.shape}, batch {batch_idx.shape}"
         
-        # Process through Erwin - it expects [num_points, channels] for features
-        processed_tokens = self.erwin(slice_token, pos, batch_idx)
+        # Process through Erwin
+        processed_states = self.erwin(eidetic_states_flat, pos, batch_idx)
         
         # Reshape back to original format [B, H, G, C]
-        processed_tokens = processed_tokens.reshape(B, H, G, C)
+        processed_states = processed_states.reshape(B, H, G, C)
         
-        # Deslice using the same weights
-        out = torch.einsum("bhgc,bhng->bhnc", processed_tokens, slice_weights)
+        # Deslice back: x′(k) ← Deslice(s′, w(k))
+        out = torch.einsum("bhgc,bhng->bhnc", processed_states, slice_weights)
         out = rearrange(out, 'b h n d -> b n (h d)')
+        
         return self.to_out(out)
 
 
