@@ -13,6 +13,7 @@ from dataset.dataset import GraphDataset
 import scipy as sc
 from models.Transolver import Model
 from tqdm import tqdm
+from torch.cuda.amp import autocast
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='/data/PDE_data/mlcfd_data/training_data')
@@ -56,17 +57,13 @@ val_ds = GraphDataset(val_data, use_cfd_mesh=args.cfd_mesh, r=args.r)
 path = f'metrics/{args.cfd_model}/{args.fold_id}/{args.nb_epochs}_{args.weight}'
 
 # 1. Reconstruct the model with training-time hyperparameters
-model = Model(
-    n_hidden=256,
-    n_layers=8,
-    space_dim=7,
-    fun_dim=0,
-    n_head=8,
-    mlp_ratio=2,
-    out_dim=4,
-    slice_num=32,
-    unified_pos=0
-).to(device)
+model = Model(n_hidden=256, n_layers=1, space_dim=3,
+                  fun_dim=4,
+                  n_head=8,
+                  mlp_ratio=2, out_dim=4,
+                  slice_num=32,
+                  radius=args.r,
+                  unified_pos=0).to(device)
 
 # Load checkpoint
 checkpoint_path = os.path.join(path, f'model_{args.nb_epochs}.pth')
@@ -97,7 +94,10 @@ with torch.no_grad():
         cfd_data = cfd_data.to(device)
         geom = geom.to(device)
         tic = time.time()
-        out = model((cfd_data, geom))
+        
+        with autocast():
+            out = model((cfd_data, geom))
+            
         toc = time.time()
         targets = cfd_data.y
 

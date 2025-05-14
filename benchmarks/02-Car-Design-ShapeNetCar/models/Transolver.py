@@ -8,7 +8,7 @@ ACTIVATION = {'gelu': nn.GELU, 'tanh': nn.Tanh, 'sigmoid': nn.Sigmoid, 'relu': n
               'softplus': nn.Softplus, 'ELU': nn.ELU, 'silu': nn.SiLU}
 
 
-from ....models.components import ErwinFlashTransformer as ErwinTransformer
+from .components import ErwinFlashTransformer as ErwinTransformer
 
 class ErwinTransolver(nn.Module):
     """Combines Transolver++'s slicing with adaptive temperature and eidetic states with Erwin's hierarchical processing.
@@ -23,7 +23,8 @@ class ErwinTransolver(nn.Module):
         dropout: float = 0.0,
         dimensionality: int = 3,
         base_temp: float = 0.5,
-        epsilon: float = 1e-6  # For the log(-log(ε)) term in Rep-Slice
+        epsilon: float = 1e-6,  # For the log(-log(ε)) term in Rep-Slice
+        radius: float = 1.0     # Add radius parameter with default value
     ):
         super().__init__()
         inner_dim = dim_head * heads
@@ -32,6 +33,7 @@ class ErwinTransolver(nn.Module):
         self.slice_num = slice_num
         self.dimensionality = dimensionality
         self.epsilon = epsilon
+        self.radius = radius    # Store the radius parameter
         
         # Input projections for slicing (just x, not fx to save 50% memory as per algorithm)
         self.in_project_x = nn.Linear(dim, inner_dim)
@@ -49,16 +51,16 @@ class ErwinTransolver(nn.Module):
             c_in=dim_head,
             c_hidden=[dim_head, dim_head*2],  # Two levels of hierarchy
             ball_sizes=[min(32, slice_num), min(16, slice_num//2)],  # Progressive reduction
-            enc_num_heads=[heads//2, heads],
-            enc_depths=[2, 2],
-            dec_num_heads=[heads//2],
-            dec_depths=[2],
+            enc_num_heads=[heads, heads],
+            enc_depths=[4, 4],
+            dec_num_heads=[heads],
+            dec_depths=[4],
             strides=[2],
-            rotate=1,  # Enable rotation for better cross-token mixing
+            rotate=45,  # Enable rotation for better cross-token mixing
             decode=True,  # We need the full resolution back
             mlp_ratio=4,
             dimensionality=dimensionality,
-            mp_steps=0  # No need for MPNN here
+            mp_steps=3  # No need for MPNN here
         )
         
         # Output projection
@@ -122,7 +124,7 @@ class ErwinTransolver(nn.Module):
             f"Shapes mismatch: features {eidetic_states_flat.shape}, pos {pos.shape}, batch {batch_idx.shape}"
         
         # Process through Erwin
-        processed_states = self.erwin(eidetic_states_flat, pos, batch_idx)
+        processed_states = self.erwin(eidetic_states_flat, pos, batch_idx, radius=self.radius)
         
         # Reshape back to original format [B, H, G, C]
         processed_states = processed_states.reshape(B, H, G, C)
@@ -175,12 +177,13 @@ class Transolver_block(nn.Module):
             last_layer=False,
             out_dim=1,
             slice_num=32,
+            radius=1.0
     ):
         super().__init__()
         self.last_layer = last_layer
         self.ln_1 = nn.LayerNorm(hidden_dim)
         self.Attn = ErwinTransolver(hidden_dim, heads=num_heads, dim_head=hidden_dim // num_heads,
-                                                     dropout=dropout, slice_num=slice_num)
+                                     dropout=dropout, slice_num=slice_num, radius=radius)
         self.ln_2 = nn.LayerNorm(hidden_dim)
         self.mlp = MLP(hidden_dim, hidden_dim * mlp_ratio, hidden_dim, n_layers=0, res=False, act=act)
         if self.last_layer:
@@ -209,7 +212,8 @@ class Model(nn.Module):
                  out_dim=1,
                  slice_num=32,
                  ref=8,
-                 unified_pos=False
+                 unified_pos=False,
+                 radius=1.0
                  ):
         super(Model, self).__init__()
         self.__name__ = 'UniPDE_3D'
@@ -230,6 +234,7 @@ class Model(nn.Module):
                                                       mlp_ratio=mlp_ratio,
                                                       out_dim=out_dim,
                                                       slice_num=slice_num,
+                                                      radius=radius,
                                                       last_layer=(_ == n_layers - 1))
                                      for _ in range(n_layers)])
         self.initialize_weights()
@@ -244,8 +249,10 @@ class Model(nn.Module):
             if isinstance(m, nn.Linear) and m.bias is not None:
                 nn.init.constant_(m.bias, 0)
         elif isinstance(m, (nn.LayerNorm, nn.BatchNorm1d)):
-            nn.init.constant_(m.bias, 0)
-            nn.init.constant_(m.weight, 1.0)
+            if hasattr(m, 'bias') and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+            if hasattr(m, 'weight') and m.weight is not None:
+                nn.init.constant_(m.weight, 1.0)
 
     def get_grid(self, my_pos):
         # my_pos 1 N 3
