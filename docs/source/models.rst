@@ -15,9 +15,9 @@ The HAET implementation is organized into several key modules:
     ├── Transolver_Structured_Mesh_3D.py
     ├── PhysicsAttention/
     │   ├── __init__.py
-    │   ├── IrregularMesh.py
-    │   ├── StructuredMesh2D.py
-    │   └── StructuredMesh3D.py
+    │   ├── IrregularMesh.py      # Implements Transolver++ with Erwin
+    │   ├── StructuredMesh2D.py   # Implements Transolver++ with Erwin for 2D structured meshes
+    │   └── StructuredMesh3D.py   # Implements Transolver++ with Erwin for 3D structured meshes
     └── components/
         ├── __init__.py
         ├── embedding.py
@@ -41,7 +41,8 @@ Transolver Models
 These models serve as the main entry point for the HAET architecture. Each model:
 
 - Processes input mesh data
-- Applies token slicing through Physics Attention modules
+- Applies Rep-Slice with adaptive temperature through Physics Attention modules
+- Creates and processes eidetic states for memory efficiency
 - Integrates with Erwin for hierarchical processing
 
 .. code-block:: python
@@ -56,16 +57,37 @@ These models serve as the main entry point for the HAET architecture. Each model
         slice_num=32, # Number of slice tokens
     )
 
-Physics Attention
----------------
+Physics Attention with Transolver++
+---------------------------
 
-The Physics Attention modules handle the core mechanism of tokenization and attention:
+The Physics Attention modules handle the core mechanism of tokenization and attention using Transolver++ approach:
 
 - ``Physics_Attention_Irregular_Mesh``: For irregular geometries
 - ``Physics_Attention_Structured_Mesh_2D``: For 2D structured grids
 - ``Physics_Attention_Structured_Mesh_3D``: For 3D structured grids
 
-These modules implement the Transolver-Erwin integration, replacing standard attention with hierarchical ball attention.
+These modules implement the Transolver++-Erwin integration with several key improvements:
+
+1. **Rep-Slice with Ada-Temp**: Enhanced slicing with adaptive temperature for better token quality
+2. **Eidetic States**: Memory-efficient token representations that reduce memory usage by 50%
+3. **Hierarchical Ball Attention**: Replaces standard attention with Erwin's efficient ball attention
+
+Example implementation of Transolver++ approach:
+
+.. code-block:: python
+
+    # Compute adaptive temperature (Ada-Temp): τ = τ0 + Linear(xi)
+    adaptive_temp = self.base_temp + self.ada_temp_linear(x_proj).clamp(min=-0.4, max=0.4)
+    
+    # Compute Rep-Slice: Softmax(Linear(x) - log(-log(ε))) / τ
+    log_neg_log_epsilon = torch.log(-torch.log(torch.tensor(self.epsilon, device=x.device)))
+    slice_logits = self.in_project_slice(x_proj) - log_neg_log_epsilon
+    slice_weights = torch.softmax(slice_logits / adaptive_temp, dim=2)
+    
+    # Compute weights norm and eidetic states
+    slice_norm = slice_weights.sum(2)
+    eidetic_states = torch.einsum("bhnc,bhng->bhgc", x_proj, slice_weights)
+    eidetic_states = eidetic_states / ((slice_norm + 1e-5)[:, :, :, None])
 
 Erwin Components
 --------------

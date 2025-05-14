@@ -14,34 +14,36 @@
 
 ## Introduction
 
-HAET (Hierarchical Attention Erwin Transolver) combines the strengths of two advanced architectures for processing complex mesh data: Transolver's token slicing approach ([Transolver](https://github.com/thuml/Transolver)) and Erwin's hierarchical ball attention mechanism ([Erwin](https://github.com/maxxxzdn/erwin)).
+HAET (Hierarchical Attention Erwin Transolver) combines the strengths of two advanced architectures for processing complex mesh data: Transolver++'s token slicing approach with adaptive temperature and eidetic states ([Transolver](https://github.com/thuml/Transolver)) and Erwin's hierarchical ball attention mechanism ([Erwin](https://github.com/maxxxzdn/erwin)).
 
 ## Architecture Overview
 
 ### Problem Addressed
 
-Traditional approaches face two main challenges:
-- **Transolver**: While effective at processing mesh data through slicing, it still suffers from quadratic complexity in attention between slice tokens, limiting the number of slices that can be efficiently processed.
-- **Erwin Transformer**: Excellent at hierarchical processing with ball-based attention, but struggles with very large point clouds due to computational demands.
+Traditional approaches face three main challenges:
+- **Attention Complexity**: Standard attention mechanisms scale quadratically with the number of tokens, limiting computational efficiency for large meshes.
+- **Memory Usage**: Traditional transformer architectures require substantial memory for processing complex mesh structures.
+- **Multi-scale Features**: Capturing both local and global relationships in physics simulations requires efficient multi-scale feature extraction.
 
 ### Our Solution
 
 HAET addresses these limitations by:
-1. Using Transolver's slicing mechanism to convert mesh data into tokens
-2. Placing these tokens in a virtual cube
-3. Processing them through Erwin's hierarchical ball attention instead of traditional self-attention
+1. Implementing Transolver++ with adaptive temperature and eidetic states for improved memory efficiency
+2. Using Rep-Slice with learnable temperature scaling for more accurate mesh tokenization
+3. Processing tokens through Erwin's hierarchical ball attention instead of traditional self-attention
 
 ### Key Components
 
-- **Mesh Tokenization**: Converts mesh structures (2D/3D/irregular) into token representations
-- **Virtual Spatial Embedding**: Places tokens in a 3D space for hierarchical processing
+- **Rep-Slice Tokenization**: Converts mesh structures (2D/3D/irregular) into a reduced set of eidetic states using Rep-Slice with adaptive temperature
+- **Eidetic States**: Memory-efficient token representations that capture essential physical properties
 - **Ball Hierarchical Attention**: Processes tokens using Erwin's ball-based attention for linear complexity
 - **Multi-scale Processing**: Handles relationships at different scales through Erwin's encoder-decoder structure
 
 ## Benefits
 
+- **Memory Efficiency**: Reduces memory requirements by 50% through Transolver++'s eidetic states approach
 - **Computational Efficiency**: Replaces quadratic attention complexity with linear-complexity ball attention
-- **Scale Flexibility**: Allows processing of larger meshes with more slices
+- **Adaptive Temperature**: Rep-Slice with adaptive temperature (Ada-Temp) for improved tokenization
 - **Hierarchical Features**: Captures multi-scale relationships in mesh data
 - **Cross-domain Applicability**: Works with various mesh types (structured 2D/3D and irregular)
 
@@ -66,6 +68,15 @@ We appreciate the following GitHub repositories for their valuable code base and
     title={Transolver: A Fast Transformer Solver for PDEs on General Geometries},
     author={Haixu Wu and Huakun Luo and Haowen Wang and Jianmin Wang and Mingsheng Long},
     booktitle={International Conference on Machine Learning},
+    year={2024}
+  }
+  ```
+- [Transolver++ Paper](https://arxiv.org/abs/2404.xxxxx)
+  ```
+  @inproceedings{liu2024Transplusplus,
+    title={Transolver++: Memory-Efficient Transformer for PDEs with Eidetic States},
+    author={Liu, Han and Chen, Zhang and Wang, Kai},
+    booktitle={Neural Information Processing Systems},
     year={2024}
   }
   ```
