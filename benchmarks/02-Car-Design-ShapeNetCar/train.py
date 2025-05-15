@@ -226,13 +226,20 @@ def main(device, train_dataset, val_dataset, Net, hparams, path, reg=1, val_iter
     for epoch in pbar_train:
         epoch_start = time.time()
         
-        train_loader = DataLoader(train_dataset, batch_size=hparams['batch_size'], shuffle=True, drop_last=True)
-        loss_velo, loss_press = train(device, model, train_loader, optimizer, lr_scheduler, reg=reg)
+        train_loader = DataLoader(train_dataset,
+                                  batch_size=hparams['batch_size'],
+                                  shuffle=True,
+                                  drop_last=True,
+                                  pin_memory=True, 
+                                  num_workers=4)
+        loss_velo, loss_press = train(device,model, train_loader, optimizer, lr_scheduler, reg=reg)
         train_loss = loss_velo + reg * loss_press
         del train_loader
 
         if val_iter is not None and (epoch == hparams['nb_epochs'] - 1 or epoch % val_iter == 0):
-            val_loader = DataLoader(val_dataset, batch_size=1)
+            val_loader = DataLoader(val_dataset, batch_size=1, 
+                                    pin_memory=True, 
+                                    num_workers=4)
             loss_velo, loss_press = test(device, model, val_loader)
             val_loss = loss_velo + reg * loss_press
             del val_loader
