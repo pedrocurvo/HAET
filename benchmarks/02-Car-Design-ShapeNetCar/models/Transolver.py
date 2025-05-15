@@ -60,7 +60,7 @@ class ErwinTransolver(nn.Module):
             decode=True,  # We need the full resolution back
             mlp_ratio=4,
             dimensionality=dimensionality,
-            mp_steps=3  # No need for MPNN here
+            mp_steps=0  # No need for MPNN here
         )
         
         # Output projection
@@ -113,8 +113,18 @@ class ErwinTransolver(nn.Module):
         # Reshape for Erwin: [B, H, G, C] -> [B*H*G, C]
         eidetic_states_flat = eidetic_states.reshape(B*H*G, C)
         
-        # Create artificial positions for eidetic states (uniformly distributed in unit cube)
-        pos = torch.rand(B*H*G, self.dimensionality, device=x.device)
+        # Use center of mass positions for eidetic states instead of random positions
+        # Since eidetic states are already weighted averages (center of mass) of the input features,
+        # we compute their spatial representation in the unit cube based on their relative positions
+        # in the feature space, normalized across each batch and head
+        
+        # Compute center of mass positions by normalizing features to unit cube
+        feat_min = eidetic_states_flat.min(dim=0, keepdim=True)[0]
+        feat_max = eidetic_states_flat.max(dim=0, keepdim=True)[0]
+        feat_range = feat_max - feat_min + 1e-8  # Add epsilon to avoid division by zero
+        
+        # Use first dimensionality components as spatial positions, normalized to [0,1]
+        pos = (eidetic_states_flat[:, :self.dimensionality] - feat_min[:, :self.dimensionality]) / feat_range[:, :self.dimensionality]
         
         # Create batch indices - each slice token needs its own batch index
         batch_idx = torch.arange(B*H, device=x.device).repeat_interleave(G)
