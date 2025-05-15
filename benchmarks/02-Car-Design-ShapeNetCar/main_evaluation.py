@@ -57,20 +57,30 @@ val_ds = GraphDataset(val_data, use_cfd_mesh=args.cfd_mesh, r=args.r)
 path = f'metrics/{args.cfd_model}/{args.fold_id}/{args.nb_epochs}_{args.weight}'
 
 # 1. Reconstruct the model with training-time hyperparameters
-model = Model(n_hidden=256, n_layers=1, space_dim=3,
+model = Model(n_hidden=256, n_layers=2, space_dim=3,
                   fun_dim=4,
                   n_head=8,
                   mlp_ratio=2, out_dim=4,
-                  slice_num=32,
+                  slice_num=128,
                   radius=args.r,
-                  unified_pos=0).to(device)
+                  unified_pos=0).cuda()
 
 # Load checkpoint
 checkpoint_path = os.path.join(path, f'model_{args.nb_epochs}.pth')
 checkpoint = torch.load(checkpoint_path, map_location=device)
 
-# Load only the model weights
-model.load_state_dict(checkpoint['model_state_dict'])
+# Process state dict to remove "_orig_mod." prefix from keys (added by torch.compile)
+state_dict = checkpoint['model_state_dict']
+new_state_dict = {}
+for key, value in state_dict.items():
+    if key.startswith('_orig_mod.'):
+        new_key = key[len('_orig_mod.'):]
+        new_state_dict[new_key] = value
+    else:
+        new_state_dict[key] = value
+
+# Load the processed state dict
+model.load_state_dict(new_state_dict)
 
 test_loader = DataLoader(val_ds, batch_size=1)
 
