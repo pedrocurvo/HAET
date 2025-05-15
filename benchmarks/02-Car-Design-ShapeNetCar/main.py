@@ -35,12 +35,12 @@ train_data, val_data, coef_norm = load_train_val_fold(args, preprocessed=args.pr
 train_ds = GraphDataset(train_data, use_cfd_mesh=args.cfd_mesh, r=args.r)
 val_ds = GraphDataset(val_data, use_cfd_mesh=args.cfd_mesh, r=args.r)
 
-if args.cfd_model == 'ErwinTransolver':
-    model = Model(n_hidden=256, n_layers=1, space_dim=3,
+if args.cfd_model == 'ErwinTransolverNoEmbedding':
+    model = Model(n_hidden=256, n_layers=2, space_dim=3,
                   fun_dim=4,
                   n_head=8,
                   mlp_ratio=2, out_dim=4,
-                  slice_num=32,
+                  slice_num=128,
                   radius=args.r,
                   unified_pos=0).cuda()
 
@@ -48,5 +48,7 @@ path = f'metrics/{args.cfd_model}/{args.fold_id}/{args.nb_epochs}_{args.weight}'
 if not os.path.exists(path):
     os.makedirs(path)
 
+# Compilte model 
+model = torch.compile(model, mode="max-autotune")
 model = train.main(device, train_ds, val_ds, model, hparams, path, val_iter=args.val_iter, reg=args.weight,
                    coef_norm=coef_norm)
