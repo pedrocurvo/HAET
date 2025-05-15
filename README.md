@@ -73,12 +73,14 @@ We appreciate the following GitHub repositories for their valuable code base and
   ```
 - [Transolver++ Paper](https://arxiv.org/abs/2404.xxxxx)
   ```
-  @inproceedings{liu2024Transplusplus,
-    title={Transolver++: Memory-Efficient Transformer for PDEs with Eidetic States},
-    author={Liu, Han and Chen, Zhang and Wang, Kai},
-    booktitle={Neural Information Processing Systems},
-    year={2024}
-  }
+  @misc{luo2025transolver,
+    title={Transolver++: An Accurate Neural Solver for PDEs on Million-Scale Geometries},
+    author={Huakun Luo and Haixu Wu and Hang Zhou and Lanxiang Xing and Yichen Di and Jianmin Wang and Mingsheng Long},
+    year={2025},
+    eprint={2502.02414},
+    archivePrefix={arXiv},
+    primaryClass={cs.LG}
+}
   ```
 - [Erwin](https://github.com/maxxxzdn/erwin)
   ```
