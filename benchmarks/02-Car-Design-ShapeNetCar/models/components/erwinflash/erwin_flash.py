@@ -61,7 +61,8 @@ class ErwinTransformer(nn.Module):
         self.ball_sizes = ball_sizes
         self.strides = strides
 
-        self.embed = ErwinEmbedding(c_in, c_hidden[0], mp_steps, dimensionality)
+        # self.embed = ErwinEmbedding(c_in, c_hidden[0], mp_steps, dimensionality)
+        # self.embed = nn.Identity()
 
         num_layers = len(enc_depths) - 1  # last one is a bottleneck
 
@@ -149,7 +150,7 @@ class ErwinTransformer(nn.Module):
                     self.ball_sizes,
                     self.rotate,
                 )
-            if edge_index is None and self.embed.mp_steps:
+            if edge_index is None and 0:
                 assert (
                     radius is not None
                 ), "radius (float) must be provided if edge_index is not given to build radius graph"
@@ -157,8 +158,8 @@ class ErwinTransformer(nn.Module):
                     node_positions, radius, batch=batch_idx, loop=True
                 )
 
-        x = self.embed(node_features, node_positions, edge_index)
-
+        # x = self.embed(node_features, node_positions, edge_index)
+        x = node_features
         node = Node(
             x=x[tree_idx],
             pos=node_positions[tree_idx],
