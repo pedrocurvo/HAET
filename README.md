@@ -30,7 +30,7 @@ HAET resolves both limitations by using Transolver++ to generate physical-aware 
 
 - 💾 Memory Pressure on Full Attention Models: Full-resolution attention is impractical for large meshes.
 
-## Our Solution
+### Our Solution
 
 HAET introduces a modular hybrid pipeline:
 
@@ -44,7 +44,7 @@ HAET introduces a modular hybrid pipeline:
 
 This pipeline allows HAET to scale beyond previous limitations while maintaining strong inductive biases from physics and geometry.
 
-## Key Features
+### Key Features
 
 - 🔁 Linear Attention Complexity: Erwin replaces quadratic attention with a hierarchical mechanism over slices.
 
@@ -67,6 +67,14 @@ HAET is ideal for large-scale physics and engineering simulations, including:
 - 🏗️ Structural and thermal analysis
 
 - ⚙️ General physical system modeling with spatial structure
+
+### Experiments
+
+We evaluate HAET on a variety of benchmarks, including:
+- **Car Design**: Predicting aerodynamic properties of car shapes using a dataset of 3D meshes.
+
+For more details on how to run the experiments, please refer to the README files in the respective benchmark folders:
+- [Car Design Benchmark](benchmarks/02-Car-Design-ShapeNetCar/README.md).
 
 ## Acknowledgements
 
