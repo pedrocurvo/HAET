@@ -2,7 +2,7 @@ Models
 ======
 
 Core Model Structure
-------------------
+-------------------
 
 The HAET implementation is organized into several key modules:
 
@@ -10,9 +10,9 @@ The HAET implementation is organized into several key modules:
 
     models/
     ├── __init__.py
-    ├── Transolver_Irregular_Mesh.py
-    ├── Transolver_Structured_Mesh_2D.py
-    ├── Transolver_Structured_Mesh_3D.py
+    ├── HAETransolver_Irregular_Mesh.py
+    ├── HAETransolver_Structured_Mesh_2D.py
+    ├── HAETransolver_Structured_Mesh_3D.py
     ├── PhysicsAttention/
     │   ├── __init__.py
     │   ├── IrregularMesh.py      # Implements Transolver++ with Erwin
@@ -27,16 +27,16 @@ The HAET implementation is organized into several key modules:
         └── erwinflash/
 
 Main Model Classes
-----------------
+-------------------
 
 The library provides three main model variants for different mesh types:
 
-1. ``Transolver_Irregular_Mesh``: For processing irregular mesh structures
-2. ``Transolver_Structured_Mesh_2D``: For processing 2D structured grid data
-3. ``Transolver_Structured_Mesh_3D``: For processing 3D structured grid data
+1. ``HAETransolver_Irregular_Mesh``: For processing irregular mesh structures
+2. ``HAETransolver_Structured_Mesh_2D``: For processing 2D structured grid data
+3. ``HAETransolver_Structured_Mesh_3D``: For processing 3D structured grid data
 
-Transolver Models
----------------
+HAETransolver Models
+------------------
 
 These models serve as the main entry point for the HAET architecture. Each model:
 
@@ -47,32 +47,44 @@ These models serve as the main entry point for the HAET architecture. Each model
 
 .. code-block:: python
 
-    from models import Transolver_Structured_Mesh_3D
+    from models import HAETransolver_Structured_Mesh_3D
     
-    model = Transolver_Structured_Mesh_3D(
-        space_dim=3,  # Spatial dimensions
-        n_layers=5,   # Number of transformer layers
-        n_hidden=256, # Hidden dimension size
-        n_head=8,     # Number of attention heads
-        slice_num=32, # Number of slice tokens
+    model = HAETransolver_Structured_Mesh_3D(
+        space_dim=3,     # Spatial dimensions
+        n_layers=5,      # Number of transformer layers
+        n_hidden=256,    # Hidden dimension size
+        n_head=8,        # Number of attention heads
+        slice_num=32,    # Number of slice tokens
+        # ErwinTransformer parameters
+        c_hidden=64,     # Hidden dimension for Erwin transformer
+        ball_sizes=[0.2, 0.4],  # Ball sizes for hierarchical attention
+        enc_num_heads=[4, 4],   # Number of heads in each encoder layer
+        enc_depths=[2, 2],      # Number of layers in each encoder
+        dec_num_heads=[4, 4],   # Number of heads in each decoder layer
+        dec_depths=[2, 2],      # Number of layers in each decoder
+        strides=[2, 2],     # Strides for downsampling
+        rotate=45,          # Rotation angle
+        decode=True,        # Whether to use decoder
+        mp_steps=0,         # Number of message passing steps (default 0)
+        embed=False         # Whether to embed the input
     )
 
-Physics Attention with Transolver++
----------------------------
+Physics Attention with HAETransolver++
+---------------------------------------
 
-The Physics Attention modules handle the core mechanism of tokenization and attention using Transolver++ approach:
+The Physics Attention modules handle the core mechanism of tokenization and attention using HAETransolver++ approach:
 
 - ``Physics_Attention_Irregular_Mesh``: For irregular geometries
 - ``Physics_Attention_Structured_Mesh_2D``: For 2D structured grids
 - ``Physics_Attention_Structured_Mesh_3D``: For 3D structured grids
 
-These modules implement the Transolver++-Erwin integration with several key improvements:
+These modules implement the HAETransolver++-Erwin integration with several key improvements:
 
 1. **Rep-Slice with Ada-Temp**: Enhanced slicing with adaptive temperature for better token quality
 2. **Eidetic States**: Memory-efficient token representations that reduce memory usage by 50%
 3. **Hierarchical Ball Attention**: Replaces standard attention with Erwin's efficient ball attention
 
-Example implementation of Transolver++ approach:
+Example implementation of HAETransolver++ approach:
 
 .. code-block:: python
 
@@ -89,16 +101,32 @@ Example implementation of Transolver++ approach:
     eidetic_states = torch.einsum("bhnc,bhng->bhgc", x_proj, slice_weights)
     eidetic_states = eidetic_states / ((slice_norm + 1e-5)[:, :, :, None])
 
-Erwin Components
---------------
+Erwin Components and Parameters
+------------------------------
 
 The Erwin components provide the hierarchical ball attention mechanism:
 
 - ``ErwinTransformer``: Standard implementation
 - ``ErwinFlashTransformer``: Optimized implementation using Flash Attention
 
+Key Erwin parameters include:
+
+- ``c_hidden``: Hidden dimension size in the Erwin transformer
+- ``ball_sizes``: List of ball sizes for different hierarchical levels
+- ``enc_num_heads``: List of number of attention heads for each encoder layer
+- ``enc_depths``: List of number of layers in each encoder
+- ``dec_num_heads``: List of number of attention heads for each decoder layer
+- ``dec_depths``: List of number of layers in each decoder
+- ``strides``: List of stride values for downsampling
+- ``rotate``: Rotation angle in degrees for ball attention
+- ``decode``: Whether to use the decoder component
+- ``mp_steps``: Number of message passing steps (default 0)
+- ``embed``: Whether to use additional embedding
+
+These parameters control the hierarchical structure of the Erwin transformer and how it processes the tokens from the Transolver++ component.
+
 Ball Attention Mechanism
----------------------
+------------------------
 
 The core of HAET's efficiency is the Ball Multi-Head Self-Attention (BMSA):
 

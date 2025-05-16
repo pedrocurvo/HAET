@@ -13,26 +13,26 @@ Core Models
 
 These are the main model implementations for different types of meshes.
 
-Transolver Irregular Mesh
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+HAETransolver Irregular Mesh
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: models.Transolver_Irregular_Mesh
+.. automodule:: models.HAETransolver_Irregular_Mesh
    :members:
    :undoc-members:
    :show-inheritance:
 
-Transolver Structured Mesh 2D
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+HAETransolver Structured Mesh 2D
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: models.Transolver_Structured_Mesh_2D
+.. automodule:: models.HAETransolver_Structured_Mesh_2D
    :members:
    :undoc-members:
    :show-inheritance:
 
-Transolver Structured Mesh 3D
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+HAETransolver Structured Mesh 3D
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: models.Transolver_Structured_Mesh_3D
+.. automodule:: models.HAETransolver_Structured_Mesh_3D
    :members:
    :undoc-members:
    :show-inheritance:
@@ -51,7 +51,7 @@ Irregular Mesh
    :show-inheritance:
 
 Structured Mesh 2D
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: models.PhysicsAttention.StructuredMesh2D
    :members:
@@ -59,7 +59,7 @@ Structured Mesh 2D
    :show-inheritance:
 
 Structured Mesh 3D
-^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: models.PhysicsAttention.StructuredMesh3D
    :members:
@@ -70,14 +70,6 @@ Transformer Components
 -----------------------
 
 These components implement the hierarchical ball attention mechanism.
-
-Erwin Transformer
-^^^^^^^^^^^^^^^^
-
-.. automodule:: models.components.erwin.erwin_transformer
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 Erwin Flash Transformer
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -90,7 +82,7 @@ Erwin Flash Transformer
 Ball Multi-Head Self-Attention
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: models.components.erwin.components.attention
+.. automodule:: models.components.erwinflash.components.attention
    :members:
    :undoc-members:
    :show-inheritance:
