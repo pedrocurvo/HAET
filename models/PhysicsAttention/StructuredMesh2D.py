@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 from einops import rearrange
 
-from ..components import ErwinTransformer
+from ..components import ErwinFlashTransformer as ErwinTransformer
 
 
 class Physics_Attention_Structured_Mesh_2D(nn.Module):
@@ -53,6 +53,19 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
         kernel=3,
         base_temp=0.5,
         epsilon=1e-6,
+        # ErwinTransformer parameters
+        c_hidden=None,
+        ball_sizes=None,
+        enc_num_heads=None,
+        enc_depths=None,
+        dec_num_heads=None,
+        dec_depths=None,
+        strides=None,
+        rotate=1,
+        decode=True,
+        mlp_ratio=4,
+        mp_steps=0,
+        embed=False
     ):
         """Initialize the Physics_Attention_Structured_Mesh_2D module with Transolver++.
 
@@ -67,6 +80,18 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
             kernel (int): Size of convolution kernel for local feature extraction
             base_temp (float): Base temperature for adaptive temperature scaling
             epsilon (float): Small constant for the log(-log(ε)) term in Rep-Slice
+            c_hidden (list): Hidden channel dimensions for each hierarchical level
+            ball_sizes (list): Ball sizes for each hierarchical level
+            enc_num_heads (list): Number of attention heads for each encoder level
+            enc_depths (list): Depth of each encoder level
+            dec_num_heads (list): Number of attention heads for each decoder level
+            dec_depths (list): Depth of each decoder level
+            strides (list): Stride values for each level
+            rotate (int): Rotate flag for geometric awareness
+            decode (bool): Whether to decode/upsample back to original resolution
+            mlp_ratio (int): Expansion ratio in MLP blocks
+            mp_steps (int): Number of message passing steps
+            embed (bool): Whether to use ErwinEmbedding (True) or direct projection (False)
         """
         super().__init__()
         inner_dim = dim_head * heads
@@ -92,30 +117,39 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
         # Orthogonal initialization for better training stability
         torch.nn.init.orthogonal_(self.in_project_slice.weight)  # use a principled initialization
 
+        # Set default ErwinTransformer parameters if not provided
+        if c_hidden is None:
+            c_hidden = [dim_head, dim_head * 2]
+        if ball_sizes is None:
+            ball_sizes = [min(32, slice_num), min(16, slice_num // 2)]
+        if enc_num_heads is None:
+            enc_num_heads = [heads // 2, heads]
+        if enc_depths is None:
+            enc_depths = [2, 2]
+        if dec_num_heads is None:
+            dec_num_heads = [heads // 2]
+        if dec_depths is None:
+            dec_depths = [2]
+        if strides is None:
+            strides = [2]
+
         # Hierarchical transformer for processing sliced tokens
         # Specifically configured for 2D structured mesh data
         self.erwin = ErwinTransformer(
-            c_in=dim_head,  # Input channel dimension matches head dimension
-            c_hidden=[
-                dim_head,  # First level maintains dimension
-                dim_head * 2,  # Second level expands channels for higher expressivity
-            ],
-            ball_sizes=[
-                min(32, slice_num),  # First level considers more neighbors
-                min(16, slice_num // 2),  # Second level reduces neighborhood size
-            ],
-            enc_num_heads=[heads // 2, heads],  # More attention heads at deeper levels
-            enc_depths=[2, 2],  # Same depth at each hierarchical level
-            dec_num_heads=[
-                heads // 2
-            ],  # Decoder head count matches encoder at same level
-            dec_depths=[2],  # Decoder depth matches encoder
-            strides=[2],  # Coarsens the point cloud by factor of 2
-            rotate=1,  # Enable rotation for better geometric awareness
-            decode=True,  # Enable upsampling back to original resolution
-            mlp_ratio=4,  # Standard expansion ratio in MLP blocks
+            c_in=dim_head,          # Input channel dimension matches head dimension
+            c_hidden=c_hidden,      # Hidden channel dimensions for each level
+            ball_sizes=ball_sizes,  # Ball sizes for each level
+            enc_num_heads=enc_num_heads,  # Attention heads for each encoder level
+            enc_depths=enc_depths,  # Depth of each encoder level
+            dec_num_heads=dec_num_heads,  # Attention heads for each decoder level
+            dec_depths=dec_depths,  # Depth of each decoder level
+            strides=strides,        # Stride values for each level
+            rotate=rotate,          # Enable rotation for better geometric awareness
+            decode=decode,          # Enable upsampling back to original resolution
+            mlp_ratio=mlp_ratio,    # Standard expansion ratio in MLP blocks
             dimensionality=self.dimensionality,  # Dimensionality of the space (2D)
-            mp_steps=0,  # No message passing steps needed
+            mp_steps=mp_steps,      # Number of message passing steps
+            embed=embed,            # Use parameter value for ErwinEmbedding
         )
 
         self.to_out = nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout))
