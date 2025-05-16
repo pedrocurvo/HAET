@@ -186,10 +186,18 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
         # ErwinTransformer expects a flattened representation [num_points, channels]
         eidetic_states_flat = eidetic_states.reshape(B * H * G, C)
 
-        # Create artificial positions for eidetic states in 2D space
-        # This is needed because ErwinTransformer is position-aware
-        # Using random positions in 2D space as eidetic states don't have inherent positions
-        pos = torch.rand(B * H * G, self.dimensionality, device=eidetic_states.device)
+        # Use center of mass positions for eidetic states instead of random positions
+        # Since eidetic states are already weighted averages (center of mass) of the input features,
+        # we compute their spatial representation in the unit cube based on their relative positions
+        # in the feature space, normalized across each batch and head
+        
+        # Compute center of mass positions by normalizing features to unit cube
+        feat_min = eidetic_states_flat.min(dim=0, keepdim=True)[0]
+        feat_max = eidetic_states_flat.max(dim=0, keepdim=True)[0]
+        feat_range = feat_max - feat_min + 1e-8  # Add epsilon to avoid division by zero
+        
+        # Use first dimensionality components as spatial positions, normalized to [0,1]
+        pos = (eidetic_states_flat[:, :self.dimensionality] - feat_min[:, :self.dimensionality]) / feat_range[:, :self.dimensionality]
 
         # Create batch indices to separate different batch and head combinations
         # Each batch-head pair is treated as a separate point cloud by the transformer
