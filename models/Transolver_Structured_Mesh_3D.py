@@ -17,7 +17,7 @@ from .components import MLP, timestep_embedding
 from .PhysicsAttention import Physics_Attention_Structured_Mesh_3D
 
 
-class Transolver_block(nn.Module):
+class TransolverErwinBlock(nn.Module):
     """Transformer encoder block for 3D structured mesh data.
 
     This block consists of a physics-informed attention mechanism tailored for
@@ -47,6 +47,18 @@ class Transolver_block(nn.Module):
         H: int = 32,
         W: int = 32,
         D: int = 32,
+        # ErwinTransformer parameters
+        c_hidden=None,
+        ball_sizes=None,
+        enc_num_heads=None,
+        enc_depths=None,
+        dec_num_heads=None,
+        dec_depths=None,
+        strides=None,
+        rotate=45,
+        decode=True,
+        mp_steps=0,
+        embed=False,
     ):
         """Initialize a Transolver block for 3D structured meshes.
 
@@ -62,6 +74,17 @@ class Transolver_block(nn.Module):
             H: Height of the 3D mesh
             W: Width of the 3D mesh
             D: Depth of the 3D mesh
+            c_hidden: Hidden channel dimensions for each hierarchical level
+            ball_sizes: Ball sizes for each hierarchical level
+            enc_num_heads: Number of attention heads for each encoder level
+            enc_depths: Depth of each encoder level
+            dec_num_heads: Number of attention heads for each decoder level
+            dec_depths: Depth of each decoder level
+            strides: Stride values for each level
+            rotate: Rotate flag for geometric awareness
+            decode: Whether to decode/upsample back to original resolution
+            mp_steps: Number of message passing steps
+            embed: Whether to use ErwinEmbedding
         """
         super().__init__()
         self.last_layer = last_layer
@@ -75,6 +98,19 @@ class Transolver_block(nn.Module):
             H=H,
             W=W,
             D=D,
+            # Pass the ErwinTransformer parameters
+            c_hidden=c_hidden,
+            ball_sizes=ball_sizes,
+            enc_num_heads=enc_num_heads,
+            enc_depths=enc_depths,
+            dec_num_heads=dec_num_heads,
+            dec_depths=dec_depths,
+            strides=strides,
+            rotate=rotate,
+            decode=decode,
+            mlp_ratio=mlp_ratio,
+            mp_steps=mp_steps,
+            embed=embed,
         )
 
         self.ln_2 = nn.LayerNorm(hidden_dim)
@@ -158,6 +194,18 @@ class Model(nn.Module):
         H=32,
         W=32,
         D=32,
+        # ErwinTransformer parameters
+        c_hidden=None,
+        ball_sizes=None,
+        enc_num_heads=None,
+        enc_depths=None,
+        dec_num_heads=None,
+        dec_depths=None,
+        strides=None,
+        rotate=45,
+        decode=True,
+        mp_steps=0,
+        embed=False,
     ):
         """Initialize the Transolver model for 3D structured meshes.
 
@@ -178,6 +226,17 @@ class Model(nn.Module):
             H: Height of the 3D mesh
             W: Width of the 3D mesh
             D: Depth of the 3D mesh
+            c_hidden: Hidden channel dimensions for each hierarchical level in ErwinTransformer
+            ball_sizes: Ball sizes for each hierarchical level in ErwinTransformer
+            enc_num_heads: Number of attention heads for each encoder level in ErwinTransformer
+            enc_depths: Depth of each encoder level in ErwinTransformer
+            dec_num_heads: Number of attention heads for each decoder level in ErwinTransformer
+            dec_depths: Depth of each decoder level in ErwinTransformer
+            strides: Stride values for each level in ErwinTransformer
+            rotate: Rotate flag for geometric awareness in ErwinTransformer
+            decode: Whether to decode/upsample back to original resolution
+            mp_steps: Number of message passing steps in ErwinTransformer
+            embed: Whether to use ErwinEmbedding in ErwinTransformer
         """
         super(Model, self).__init__()
         self.__name__ = "Transolver_3D"
@@ -217,7 +276,7 @@ class Model(nn.Module):
 
         self.blocks = nn.ModuleList(
             [
-                Transolver_block(
+                TransolverErwinBlock(
                     num_heads=n_head,
                     hidden_dim=n_hidden,
                     dropout=dropout,
@@ -229,6 +288,18 @@ class Model(nn.Module):
                     W=W,
                     D=D,
                     last_layer=(_ == n_layers - 1),
+                    # Pass the ErwinTransformer parameters
+                    c_hidden=c_hidden,
+                    ball_sizes=ball_sizes,
+                    enc_num_heads=enc_num_heads,
+                    enc_depths=enc_depths,
+                    dec_num_heads=dec_num_heads,
+                    dec_depths=dec_depths,
+                    strides=strides,
+                    rotate=rotate,
+                    decode=decode,
+                    mp_steps=mp_steps,
+                    embed=embed,
                 )
                 for _ in range(n_layers)
             ]

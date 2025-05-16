@@ -13,7 +13,7 @@ from .components import MLP, timestep_embedding
 from .PhysicsAttention import Physics_Attention_Irregular_Mesh
 
 
-class Transolver_block(nn.Module):
+class TransolverErwinBlock(nn.Module):
     """Transformer encoder block for irregular mesh processing.
 
     This block consists of a physics-informed attention mechanism followed by
@@ -39,6 +39,18 @@ class Transolver_block(nn.Module):
         last_layer: bool = False,
         out_dim: int = 1,
         slice_num: int = 32,
+        # ErwinTransformer parameters
+        c_hidden=None,
+        ball_sizes=None,
+        enc_num_heads=None,
+        enc_depths=None,
+        dec_num_heads=None,
+        dec_depths=None,
+        strides=None,
+        rotate=45,
+        decode=True,
+        mp_steps=0,
+        embed=False,
     ):
         """Initialize a Transolver block for irregular meshes.
 
@@ -51,6 +63,17 @@ class Transolver_block(nn.Module):
             last_layer: Whether this is the final layer in the network
             out_dim: Output dimension (only used if last_layer=True)
             slice_num: Number of slices for attention computation
+            c_hidden: Hidden channel dimensions for each hierarchical level
+            ball_sizes: Ball sizes for each hierarchical level
+            enc_num_heads: Number of attention heads for each encoder level
+            enc_depths: Depth of each encoder level
+            dec_num_heads: Number of attention heads for each decoder level
+            dec_depths: Depth of each decoder level
+            strides: Stride values for each level
+            rotate: Rotate flag for geometric awareness
+            decode: Whether to decode/upsample back to original resolution
+            mp_steps: Number of message passing steps
+            embed: Whether to use ErwinEmbedding
         """
         super().__init__()
         self.last_layer = last_layer
@@ -61,6 +84,19 @@ class Transolver_block(nn.Module):
             dim_head=hidden_dim // num_heads,
             dropout=dropout,
             slice_num=slice_num,
+            # Pass the ErwinTransformer parameters
+            c_hidden=c_hidden,
+            ball_sizes=ball_sizes,
+            enc_num_heads=enc_num_heads,
+            enc_depths=enc_depths,
+            dec_num_heads=dec_num_heads,
+            dec_depths=dec_depths,
+            strides=strides,
+            rotate=rotate,
+            decode=decode,
+            mlp_ratio=mlp_ratio,
+            mp_steps=mp_steps,
+            embed=embed,
         )
         self.ln_2 = nn.LayerNorm(hidden_dim)
         self.mlp = MLP(
@@ -133,6 +169,18 @@ class Model(nn.Module):
         slice_num=32,
         ref=8,
         unified_pos=False,
+        # ErwinTransformer parameters
+        c_hidden=None,
+        ball_sizes=None,
+        enc_num_heads=None,
+        enc_depths=None,
+        dec_num_heads=None,
+        dec_depths=None,
+        strides=None,
+        rotate=45,
+        decode=True,
+        mp_steps=0,
+        embed=False,
     ):
         """Initialize the Transolver model for irregular meshes.
 
@@ -150,6 +198,17 @@ class Model(nn.Module):
             slice_num: Number of slices for attention computation
             ref: Reference grid resolution
             unified_pos: Whether to use unified position encoding
+            c_hidden: Hidden channel dimensions for each hierarchical level in ErwinTransformer
+            ball_sizes: Ball sizes for each hierarchical level in ErwinTransformer
+            enc_num_heads: Number of attention heads for each encoder level in ErwinTransformer
+            enc_depths: Depth of each encoder level in ErwinTransformer
+            dec_num_heads: Number of attention heads for each decoder level in ErwinTransformer
+            dec_depths: Depth of each decoder level in ErwinTransformer
+            strides: Stride values for each level in ErwinTransformer
+            rotate: Rotate flag for geometric awareness in ErwinTransformer
+            decode: Whether to decode/upsample back to original resolution
+            mp_steps: Number of message passing steps in ErwinTransformer
+            embed: Whether to use ErwinEmbedding in ErwinTransformer
         """
         super(Model, self).__init__()
         self.__name__ = "Transolver_1D"
@@ -183,7 +242,7 @@ class Model(nn.Module):
 
         self.blocks = nn.ModuleList(
             [
-                Transolver_block(
+                TransolverErwinBlock(
                     num_heads=n_head,
                     hidden_dim=n_hidden,
                     dropout=dropout,
@@ -192,6 +251,18 @@ class Model(nn.Module):
                     out_dim=out_dim,
                     slice_num=slice_num,
                     last_layer=(_ == n_layers - 1),
+                    # Pass the ErwinTransformer parameters
+                    c_hidden=c_hidden,
+                    ball_sizes=ball_sizes,
+                    enc_num_heads=enc_num_heads,
+                    enc_depths=enc_depths,
+                    dec_num_heads=dec_num_heads,
+                    dec_depths=dec_depths,
+                    strides=strides,
+                    rotate=rotate,
+                    decode=decode,
+                    mp_steps=mp_steps,
+                    embed=embed,
                 )
                 for _ in range(n_layers)
             ]
