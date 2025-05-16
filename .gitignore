@@ -346,3 +346,6 @@ cython_debug/
 # All .out files
 *.out
 
+# Personal 
+personal/
+
