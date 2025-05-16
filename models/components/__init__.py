@@ -9,8 +9,7 @@ This module provides essential building blocks for the Transolver models:
   - PositionalEncoding: Standard Transformer positional encoding
   - RotaryEmbedding: Rotary position embeddings for enhanced position awareness
 - Transformer components: Specialized transformer implementations
-  - ErwinTransformer: Base transformer implementation
-  - ErwinFlashTransformer: Memory-efficient transformer with FlashAttention
+  - ErwinFlashTransformer: Memory-efficient Erwin transformer with FlashAttention
 """
 
 from .embedding import (
@@ -21,13 +20,11 @@ from .embedding import (
     rotate_half,
     timestep_embedding,
 )
-from .erwin import ErwinTransformer
 from .erwinflash import ErwinTransformer as ErwinFlashTransformer
 from .mlp import MLP
 
 __all__ = [
     "MLP",
-    "ErwinTransformer",
     "ErwinFlashTransformer",
     "timestep_embedding",
     "rotate_half",
