@@ -1,0 +1,1789 @@
+============================================================================================== 
+Warning! Mixing Conda and module environments may lead to corruption of the
+user environment. 
+We do not recommend users mixing those two environments unless absolutely
+necessary. Note that 
+SURF does not provide any support for Conda environment.
+For more information, please refer to our software policy page:
+https://servicedesk.surf.nl/wiki/display/WIKI/Software+policy+Snellius#SoftwarepolicySnellius-UseofAnacondaandMinicondaenvironmentsonSnellius 
+
+Remember that many packages have already been installed on the system and can
+be loaded using 
+the 'module load <package__name>' command. If you are uncertain if a package is
+already available 
+on the system, please use 'module avail' or 'module spider' to search for it.
+============================================================================================== 
+wandb: Currently logged in as: pedro-mpcurvo (pedro-mpcurvo-university-of-amsterdam) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+/sw/arch/RHEL9/EB_production/2024/software/Anaconda3/2024.06-1/lib/python3.12/site-packages/pydantic/main.py:308: UserWarning: Pydantic serializer warnings:
+  Expected `list[str]` but got `tuple` - serialized value may not be as expected
+  Expected `list[str]` but got `tuple` - serialized value may not be as expected
+  return self.__pydantic_serializer__.to_python(
+/sw/arch/RHEL9/EB_production/2024/software/Anaconda3/2024.06-1/lib/python3.12/site-packages/pydantic/main.py:308: UserWarning: Pydantic serializer warnings:
+  Expected `list[str]` but got `tuple` - serialized value may not be as expected
+  Expected `list[str]` but got `tuple` - serialized value may not be as expected
+  return self.__pydantic_serializer__.to_python(
+wandb: Tracking run with wandb version 0.19.11
+wandb: Run data is saved locally in /gpfs/home2/scur1428/HAET/benchmarks/02.1-Car-Design-ShapeNetCar/wandb/run-20250514_103955-ywrtlf69
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run eval_ErwinFlashTransformer_fold0_ep200
+wandb: ⭐️ View project at https://wandb.ai/pedro-mpcurvo-university-of-amsterdam/car-design-shapenet-eval
+wandb: 🚀 View run at https://wandb.ai/pedro-mpcurvo-university-of-amsterdam/car-design-shapenet-eval/runs/ywrtlf69
+/gpfs/home2/scur1428/HAET/benchmarks/02.1-Car-Design-ShapeNetCar/main_evaluation.py:134: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  checkpoint = torch.load(checkpoint_path, map_location=device)
+Namespace(data_dir='data/shapenet_car/mlcfd_data/training_data', save_dir='data/shapenet_car/mlcfd_data/preprocessed_data', fold_id=0, gpu=0, cfd_model='ErwinFlashTransformer', cfd_mesh=False, r=0.2, weight=0.5, nb_epochs=200, wandb_project='car-design-shapenet-eval', wandb_entity=None, disable_wandb=False)
+use preprocessed data
+loading data
+load data finish
+  0%|          | 0/100 [00:00<?, ?it/s]/gpfs/home2/scur1428/HAET/benchmarks/02.1-Car-Design-ShapeNetCar/main_evaluation.py:161: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast():  # Add autocast here to handle mixed precision
+  1%|          | 1/100 [00:02<03:37,  2.20s/it]/gpfs/home2/scur1428/HAET/benchmarks/02.1-Car-Design-ShapeNetCar/main_evaluation.py:161: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast():  # Add autocast here to handle mixed precision
+  2%|▏         | 2/100 [00:03<02:27,  1.51s/it]  3%|▎         | 3/100 [00:04<02:04,  1.29s/it]  4%|▍         | 4/100 [00:05<01:53,  1.18s/it]  5%|▌         | 5/100 [00:06<01:46,  1.12s/it]  6%|▌         | 6/100 [00:07<01:42,  1.09s/it]  7%|▋         | 7/100 [00:08<01:39,  1.07s/it]  8%|▊         | 8/100 [00:09<01:36,  1.05s/it]  9%|▉         | 9/100 [00:10<01:35,  1.05s/it] 10%|█         | 10/100 [00:11<01:33,  1.04s/it] 11%|█         | 11/100 [00:12<01:32,  1.04s/it] 12%|█▏        | 12/100 [00:13<01:31,  1.04s/it] 13%|█▎        | 13/100 [00:14<01:29,  1.03s/it] 14%|█▍        | 14/100 [00:15<01:28,  1.03s/it] 15%|█▌        | 15/100 [00:16<01:27,  1.03s/it] 16%|█▌        | 16/100 [00:17<01:26,  1.03s/it] 17%|█▋        | 17/100 [00:18<01:25,  1.03s/it] 18%|█▊        | 18/100 [00:19<01:24,  1.03s/it] 19%|█▉        | 19/100 [00:20<01:22,  1.02s/it] 20%|██        | 20/100 [00:21<01:21,  1.02s/it] 21%|██        | 21/100 [00:22<01:20,  1.02s/it] 22%|██▏       | 22/100 [00:23<01:19,  1.02s/it] 23%|██▎       | 23/100 [00:24<01:18,  1.02s/it] 24%|██▍       | 24/100 [00:25<01:17,  1.02s/it] 25%|██▌       | 25/100 [00:26<01:16,  1.02s/it] 26%|██▌       | 26/100 [00:27<01:15,  1.02s/it] 27%|██▋       | 27/100 [00:28<01:14,  1.02s/it] 28%|██▊       | 28/100 [00:29<01:13,  1.02s/it] 29%|██▉       | 29/100 [00:30<01:12,  1.02s/it] 30%|███       | 30/100 [00:31<01:11,  1.02s/it] 31%|███       | 31/100 [00:32<01:11,  1.04s/it] 32%|███▏      | 32/100 [00:33<01:10,  1.03s/it] 33%|███▎      | 33/100 [00:35<01:08,  1.03s/it] 34%|███▍      | 34/100 [00:36<01:07,  1.03s/it] 35%|███▌      | 35/100 [00:37<01:06,  1.03s/it] 36%|███▌      | 36/100 [00:38<01:05,  1.03s/it] 37%|███▋      | 37/100 [00:39<01:04,  1.03s/it] 38%|███▊      | 38/100 [00:40<01:03,  1.03s/it] 39%|███▉      | 39/100 [00:41<01:02,  1.03s/it] 40%|████      | 40/100 [00:42<01:01,  1.03s/it] 41%|████      | 41/100 [00:43<01:00,  1.03s/it] 42%|████▏     | 42/100 [00:44<00:59,  1.03s/it] 43%|████▎     | 43/100 [00:45<00:58,  1.02s/it] 44%|████▍     | 44/100 [00:46<00:57,  1.02s/it] 45%|████▌     | 45/100 [00:47<00:57,  1.05s/it] 46%|████▌     | 46/100 [00:48<00:56,  1.04s/it] 47%|████▋     | 47/100 [00:49<00:54,  1.03s/it] 48%|████▊     | 48/100 [00:50<00:53,  1.02s/it] 49%|████▉     | 49/100 [00:51<00:52,  1.02s/it] 50%|█████     | 50/100 [00:52<00:51,  1.02s/it] 51%|█████     | 51/100 [00:53<00:49,  1.02s/it] 52%|█████▏    | 52/100 [00:54<00:48,  1.02s/it] 53%|█████▎    | 53/100 [00:55<00:47,  1.02s/it] 54%|█████▍    | 54/100 [00:56<00:46,  1.02s/it] 55%|█████▌    | 55/100 [00:57<00:45,  1.02s/it] 56%|█████▌    | 56/100 [00:58<00:45,  1.02s/it] 57%|█████▋    | 57/100 [00:59<00:43,  1.02s/it] 58%|█████▊    | 58/100 [01:00<00:43,  1.03s/it] 59%|█████▉    | 59/100 [01:01<00:42,  1.03s/it] 60%|██████    | 60/100 [01:02<00:41,  1.04s/it] 61%|██████    | 61/100 [01:03<00:40,  1.03s/it] 62%|██████▏   | 62/100 [01:04<00:39,  1.03s/it] 63%|██████▎   | 63/100 [01:05<00:37,  1.03s/it] 64%|██████▍   | 64/100 [01:06<00:36,  1.02s/it] 65%|██████▌   | 65/100 [01:07<00:35,  1.02s/it] 66%|██████▌   | 66/100 [01:08<00:34,  1.02s/it] 67%|██████▋   | 67/100 [01:09<00:33,  1.03s/it] 68%|██████▊   | 68/100 [01:10<00:32,  1.03s/it] 69%|██████▉   | 69/100 [01:11<00:31,  1.02s/it] 70%|███████   | 70/100 [01:12<00:30,  1.02s/it] 71%|███████   | 71/100 [01:13<00:29,  1.02s/it] 72%|███████▏  | 72/100 [01:14<00:28,  1.02s/it] 73%|███████▎  | 73/100 [01:16<00:27,  1.02s/it] 74%|███████▍  | 74/100 [01:17<00:26,  1.02s/it] 75%|███████▌  | 75/100 [01:18<00:25,  1.03s/it] 76%|███████▌  | 76/100 [01:19<00:24,  1.03s/it] 77%|███████▋  | 77/100 [01:20<00:23,  1.02s/it] 78%|███████▊  | 78/100 [01:21<00:22,  1.02s/it] 79%|███████▉  | 79/100 [01:22<00:21,  1.02s/it] 80%|████████  | 80/100 [01:23<00:20,  1.02s/it] 81%|████████  | 81/100 [01:24<00:19,  1.02s/it] 82%|████████▏ | 82/100 [01:25<00:18,  1.02s/it] 83%|████████▎ | 83/100 [01:26<00:17,  1.02s/it] 84%|████████▍ | 84/100 [01:27<00:16,  1.02s/it] 85%|████████▌ | 85/100 [01:28<00:15,  1.02s/it] 86%|████████▌ | 86/100 [01:29<00:14,  1.02s/it] 87%|████████▋ | 87/100 [01:30<00:13,  1.02s/it] 88%|████████▊ | 88/100 [01:31<00:12,  1.02s/it] 89%|████████▉ | 89/100 [01:32<00:11,  1.02s/it] 90%|█████████ | 90/100 [01:33<00:10,  1.04s/it] 91%|█████████ | 91/100 [01:34<00:09,  1.04s/it] 92%|█████████▏| 92/100 [01:35<00:08,  1.03s/it] 93%|█████████▎| 93/100 [01:36<00:07,  1.03s/it] 94%|█████████▍| 94/100 [01:37<00:06,  1.02s/it] 95%|█████████▌| 95/100 [01:38<00:05,  1.02s/it] 96%|█████████▌| 96/100 [01:39<00:04,  1.02s/it] 97%|█████████▋| 97/100 [01:40<00:03,  1.02s/it] 98%|█████████▊| 98/100 [01:41<00:02,  1.02s/it] 99%|█████████▉| 99/100 [01:42<00:01,  1.02s/it]100%|██████████| 100/100 [01:43<00:00,  1.03s/it]100%|██████████| 100/100 [01:43<00:00,  1.04s/it]
+wandb: uploading artifact run-ywrtlf69-coefficient_correlation_table
+wandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:          sample_0/coef_error ▁
+wandb:      sample_0/gt_coefficient ▁
+wandb:      sample_0/inference_time ▁
+wandb:   sample_0/l2_error_pressure ▁
+wandb:   sample_0/l2_error_velocity ▁
+wandb:        sample_0/mse_pressure ▁
+wandb:    sample_0/pred_coefficient ▁
+wandb:          sample_1/coef_error ▁
+wandb:      sample_1/gt_coefficient ▁
+wandb:      sample_1/inference_time ▁
+wandb:   sample_1/l2_error_pressure ▁
+wandb:   sample_1/l2_error_velocity ▁
+wandb:        sample_1/mse_pressure ▁
+wandb:    sample_1/pred_coefficient ▁
+wandb:         sample_10/coef_error ▁
+wandb:     sample_10/gt_coefficient ▁
+wandb:     sample_10/inference_time ▁
+wandb:  sample_10/l2_error_pressure ▁
+wandb:  sample_10/l2_error_velocity ▁
+wandb:       sample_10/mse_pressure ▁
+wandb:   sample_10/pred_coefficient ▁
+wandb:         sample_11/coef_error ▁
+wandb:     sample_11/gt_coefficient ▁
+wandb:     sample_11/inference_time ▁
+wandb:  sample_11/l2_error_pressure ▁
+wandb:  sample_11/l2_error_velocity ▁
+wandb:       sample_11/mse_pressure ▁
+wandb:   sample_11/pred_coefficient ▁
+wandb:         sample_12/coef_error ▁
+wandb:     sample_12/gt_coefficient ▁
+wandb:     sample_12/inference_time ▁
+wandb:  sample_12/l2_error_pressure ▁
+wandb:  sample_12/l2_error_velocity ▁
+wandb:       sample_12/mse_pressure ▁
+wandb:   sample_12/pred_coefficient ▁
+wandb:         sample_13/coef_error ▁
+wandb:     sample_13/gt_coefficient ▁
+wandb:     sample_13/inference_time ▁
+wandb:  sample_13/l2_error_pressure ▁
+wandb:  sample_13/l2_error_velocity ▁
+wandb:       sample_13/mse_pressure ▁
+wandb:   sample_13/pred_coefficient ▁
+wandb:         sample_14/coef_error ▁
+wandb:     sample_14/gt_coefficient ▁
+wandb:     sample_14/inference_time ▁
+wandb:  sample_14/l2_error_pressure ▁
+wandb:  sample_14/l2_error_velocity ▁
+wandb:       sample_14/mse_pressure ▁
+wandb:   sample_14/pred_coefficient ▁
+wandb:         sample_15/coef_error ▁
+wandb:     sample_15/gt_coefficient ▁
+wandb:     sample_15/inference_time ▁
+wandb:  sample_15/l2_error_pressure ▁
+wandb:  sample_15/l2_error_velocity ▁
+wandb:       sample_15/mse_pressure ▁
+wandb:   sample_15/pred_coefficient ▁
+wandb:         sample_16/coef_error ▁
+wandb:     sample_16/gt_coefficient ▁
+wandb:     sample_16/inference_time ▁
+wandb:  sample_16/l2_error_pressure ▁
+wandb:  sample_16/l2_error_velocity ▁
+wandb:       sample_16/mse_pressure ▁
+wandb:   sample_16/pred_coefficient ▁
+wandb:         sample_17/coef_error ▁
+wandb:     sample_17/gt_coefficient ▁
+wandb:     sample_17/inference_time ▁
+wandb:  sample_17/l2_error_pressure ▁
+wandb:  sample_17/l2_error_velocity ▁
+wandb:       sample_17/mse_pressure ▁
+wandb:   sample_17/pred_coefficient ▁
+wandb:         sample_18/coef_error ▁
+wandb:     sample_18/gt_coefficient ▁
+wandb:     sample_18/inference_time ▁
+wandb:  sample_18/l2_error_pressure ▁
+wandb:  sample_18/l2_error_velocity ▁
+wandb:       sample_18/mse_pressure ▁
+wandb:   sample_18/pred_coefficient ▁
+wandb:         sample_19/coef_error ▁
+wandb:     sample_19/gt_coefficient ▁
+wandb:     sample_19/inference_time ▁
+wandb:  sample_19/l2_error_pressure ▁
+wandb:  sample_19/l2_error_velocity ▁
+wandb:       sample_19/mse_pressure ▁
+wandb:   sample_19/pred_coefficient ▁
+wandb:          sample_2/coef_error ▁
+wandb:      sample_2/gt_coefficient ▁
+wandb:      sample_2/inference_time ▁
+wandb:   sample_2/l2_error_pressure ▁
+wandb:   sample_2/l2_error_velocity ▁
+wandb:        sample_2/mse_pressure ▁
+wandb:    sample_2/pred_coefficient ▁
+wandb:         sample_20/coef_error ▁
+wandb:     sample_20/gt_coefficient ▁
+wandb:     sample_20/inference_time ▁
+wandb:  sample_20/l2_error_pressure ▁
+wandb:  sample_20/l2_error_velocity ▁
+wandb:       sample_20/mse_pressure ▁
+wandb:   sample_20/pred_coefficient ▁
+wandb:         sample_21/coef_error ▁
+wandb:     sample_21/gt_coefficient ▁
+wandb:     sample_21/inference_time ▁
+wandb:  sample_21/l2_error_pressure ▁
+wandb:  sample_21/l2_error_velocity ▁
+wandb:       sample_21/mse_pressure ▁
+wandb:   sample_21/pred_coefficient ▁
+wandb:         sample_22/coef_error ▁
+wandb:     sample_22/gt_coefficient ▁
+wandb:     sample_22/inference_time ▁
+wandb:  sample_22/l2_error_pressure ▁
+wandb:  sample_22/l2_error_velocity ▁
+wandb:       sample_22/mse_pressure ▁
+wandb:   sample_22/pred_coefficient ▁
+wandb:         sample_23/coef_error ▁
+wandb:     sample_23/gt_coefficient ▁
+wandb:     sample_23/inference_time ▁
+wandb:  sample_23/l2_error_pressure ▁
+wandb:  sample_23/l2_error_velocity ▁
+wandb:       sample_23/mse_pressure ▁
+wandb:   sample_23/pred_coefficient ▁
+wandb:         sample_24/coef_error ▁
+wandb:     sample_24/gt_coefficient ▁
+wandb:     sample_24/inference_time ▁
+wandb:  sample_24/l2_error_pressure ▁
+wandb:  sample_24/l2_error_velocity ▁
+wandb:       sample_24/mse_pressure ▁
+wandb:   sample_24/pred_coefficient ▁
+wandb:         sample_25/coef_error ▁
+wandb:     sample_25/gt_coefficient ▁
+wandb:     sample_25/inference_time ▁
+wandb:  sample_25/l2_error_pressure ▁
+wandb:  sample_25/l2_error_velocity ▁
+wandb:       sample_25/mse_pressure ▁
+wandb:   sample_25/pred_coefficient ▁
+wandb:         sample_26/coef_error ▁
+wandb:     sample_26/gt_coefficient ▁
+wandb:     sample_26/inference_time ▁
+wandb:  sample_26/l2_error_pressure ▁
+wandb:  sample_26/l2_error_velocity ▁
+wandb:       sample_26/mse_pressure ▁
+wandb:   sample_26/pred_coefficient ▁
+wandb:         sample_27/coef_error ▁
+wandb:     sample_27/gt_coefficient ▁
+wandb:     sample_27/inference_time ▁
+wandb:  sample_27/l2_error_pressure ▁
+wandb:  sample_27/l2_error_velocity ▁
+wandb:       sample_27/mse_pressure ▁
+wandb:   sample_27/pred_coefficient ▁
+wandb:         sample_28/coef_error ▁
+wandb:     sample_28/gt_coefficient ▁
+wandb:     sample_28/inference_time ▁
+wandb:  sample_28/l2_error_pressure ▁
+wandb:  sample_28/l2_error_velocity ▁
+wandb:       sample_28/mse_pressure ▁
+wandb:   sample_28/pred_coefficient ▁
+wandb:         sample_29/coef_error ▁
+wandb:     sample_29/gt_coefficient ▁
+wandb:     sample_29/inference_time ▁
+wandb:  sample_29/l2_error_pressure ▁
+wandb:  sample_29/l2_error_velocity ▁
+wandb:       sample_29/mse_pressure ▁
+wandb:   sample_29/pred_coefficient ▁
+wandb:          sample_3/coef_error ▁
+wandb:      sample_3/gt_coefficient ▁
+wandb:      sample_3/inference_time ▁
+wandb:   sample_3/l2_error_pressure ▁
+wandb:   sample_3/l2_error_velocity ▁
+wandb:        sample_3/mse_pressure ▁
+wandb:    sample_3/pred_coefficient ▁
+wandb:         sample_30/coef_error ▁
+wandb:     sample_30/gt_coefficient ▁
+wandb:     sample_30/inference_time ▁
+wandb:  sample_30/l2_error_pressure ▁
+wandb:  sample_30/l2_error_velocity ▁
+wandb:       sample_30/mse_pressure ▁
+wandb:   sample_30/pred_coefficient ▁
+wandb:         sample_31/coef_error ▁
+wandb:     sample_31/gt_coefficient ▁
+wandb:     sample_31/inference_time ▁
+wandb:  sample_31/l2_error_pressure ▁
+wandb:  sample_31/l2_error_velocity ▁
+wandb:       sample_31/mse_pressure ▁
+wandb:   sample_31/pred_coefficient ▁
+wandb:         sample_32/coef_error ▁
+wandb:     sample_32/gt_coefficient ▁
+wandb:     sample_32/inference_time ▁
+wandb:  sample_32/l2_error_pressure ▁
+wandb:  sample_32/l2_error_velocity ▁
+wandb:       sample_32/mse_pressure ▁
+wandb:   sample_32/pred_coefficient ▁
+wandb:         sample_33/coef_error ▁
+wandb:     sample_33/gt_coefficient ▁
+wandb:     sample_33/inference_time ▁
+wandb:  sample_33/l2_error_pressure ▁
+wandb:  sample_33/l2_error_velocity ▁
+wandb:       sample_33/mse_pressure ▁
+wandb:   sample_33/pred_coefficient ▁
+wandb:         sample_34/coef_error ▁
+wandb:     sample_34/gt_coefficient ▁
+wandb:     sample_34/inference_time ▁
+wandb:  sample_34/l2_error_pressure ▁
+wandb:  sample_34/l2_error_velocity ▁
+wandb:       sample_34/mse_pressure ▁
+wandb:   sample_34/pred_coefficient ▁
+wandb:         sample_35/coef_error ▁
+wandb:     sample_35/gt_coefficient ▁
+wandb:     sample_35/inference_time ▁
+wandb:  sample_35/l2_error_pressure ▁
+wandb:  sample_35/l2_error_velocity ▁
+wandb:       sample_35/mse_pressure ▁
+wandb:   sample_35/pred_coefficient ▁
+wandb:         sample_36/coef_error ▁
+wandb:     sample_36/gt_coefficient ▁
+wandb:     sample_36/inference_time ▁
+wandb:  sample_36/l2_error_pressure ▁
+wandb:  sample_36/l2_error_velocity ▁
+wandb:       sample_36/mse_pressure ▁
+wandb:   sample_36/pred_coefficient ▁
+wandb:         sample_37/coef_error ▁
+wandb:     sample_37/gt_coefficient ▁
+wandb:     sample_37/inference_time ▁
+wandb:  sample_37/l2_error_pressure ▁
+wandb:  sample_37/l2_error_velocity ▁
+wandb:       sample_37/mse_pressure ▁
+wandb:   sample_37/pred_coefficient ▁
+wandb:         sample_38/coef_error ▁
+wandb:     sample_38/gt_coefficient ▁
+wandb:     sample_38/inference_time ▁
+wandb:  sample_38/l2_error_pressure ▁
+wandb:  sample_38/l2_error_velocity ▁
+wandb:       sample_38/mse_pressure ▁
+wandb:   sample_38/pred_coefficient ▁
+wandb:         sample_39/coef_error ▁
+wandb:     sample_39/gt_coefficient ▁
+wandb:     sample_39/inference_time ▁
+wandb:  sample_39/l2_error_pressure ▁
+wandb:  sample_39/l2_error_velocity ▁
+wandb:       sample_39/mse_pressure ▁
+wandb:   sample_39/pred_coefficient ▁
+wandb:          sample_4/coef_error ▁
+wandb:      sample_4/gt_coefficient ▁
+wandb:      sample_4/inference_time ▁
+wandb:   sample_4/l2_error_pressure ▁
+wandb:   sample_4/l2_error_velocity ▁
+wandb:        sample_4/mse_pressure ▁
+wandb:    sample_4/pred_coefficient ▁
+wandb:         sample_40/coef_error ▁
+wandb:     sample_40/gt_coefficient ▁
+wandb:     sample_40/inference_time ▁
+wandb:  sample_40/l2_error_pressure ▁
+wandb:  sample_40/l2_error_velocity ▁
+wandb:       sample_40/mse_pressure ▁
+wandb:   sample_40/pred_coefficient ▁
+wandb:         sample_41/coef_error ▁
+wandb:     sample_41/gt_coefficient ▁
+wandb:     sample_41/inference_time ▁
+wandb:  sample_41/l2_error_pressure ▁
+wandb:  sample_41/l2_error_velocity ▁
+wandb:       sample_41/mse_pressure ▁
+wandb:   sample_41/pred_coefficient ▁
+wandb:         sample_42/coef_error ▁
+wandb:     sample_42/gt_coefficient ▁
+wandb:     sample_42/inference_time ▁
+wandb:  sample_42/l2_error_pressure ▁
+wandb:  sample_42/l2_error_velocity ▁
+wandb:       sample_42/mse_pressure ▁
+wandb:   sample_42/pred_coefficient ▁
+wandb:         sample_43/coef_error ▁
+wandb:     sample_43/gt_coefficient ▁
+wandb:     sample_43/inference_time ▁
+wandb:  sample_43/l2_error_pressure ▁
+wandb:  sample_43/l2_error_velocity ▁
+wandb:       sample_43/mse_pressure ▁
+wandb:   sample_43/pred_coefficient ▁
+wandb:         sample_44/coef_error ▁
+wandb:     sample_44/gt_coefficient ▁
+wandb:     sample_44/inference_time ▁
+wandb:  sample_44/l2_error_pressure ▁
+wandb:  sample_44/l2_error_velocity ▁
+wandb:       sample_44/mse_pressure ▁
+wandb:   sample_44/pred_coefficient ▁
+wandb:         sample_45/coef_error ▁
+wandb:     sample_45/gt_coefficient ▁
+wandb:     sample_45/inference_time ▁
+wandb:  sample_45/l2_error_pressure ▁
+wandb:  sample_45/l2_error_velocity ▁
+wandb:       sample_45/mse_pressure ▁
+wandb:   sample_45/pred_coefficient ▁
+wandb:         sample_46/coef_error ▁
+wandb:     sample_46/gt_coefficient ▁
+wandb:     sample_46/inference_time ▁
+wandb:  sample_46/l2_error_pressure ▁
+wandb:  sample_46/l2_error_velocity ▁
+wandb:       sample_46/mse_pressure ▁
+wandb:   sample_46/pred_coefficient ▁
+wandb:         sample_47/coef_error ▁
+wandb:     sample_47/gt_coefficient ▁
+wandb:     sample_47/inference_time ▁
+wandb:  sample_47/l2_error_pressure ▁
+wandb:  sample_47/l2_error_velocity ▁
+wandb:       sample_47/mse_pressure ▁
+wandb:   sample_47/pred_coefficient ▁
+wandb:         sample_48/coef_error ▁
+wandb:     sample_48/gt_coefficient ▁
+wandb:     sample_48/inference_time ▁
+wandb:  sample_48/l2_error_pressure ▁
+wandb:  sample_48/l2_error_velocity ▁
+wandb:       sample_48/mse_pressure ▁
+wandb:   sample_48/pred_coefficient ▁
+wandb:         sample_49/coef_error ▁
+wandb:     sample_49/gt_coefficient ▁
+wandb:     sample_49/inference_time ▁
+wandb:  sample_49/l2_error_pressure ▁
+wandb:  sample_49/l2_error_velocity ▁
+wandb:       sample_49/mse_pressure ▁
+wandb:   sample_49/pred_coefficient ▁
+wandb:          sample_5/coef_error ▁
+wandb:      sample_5/gt_coefficient ▁
+wandb:      sample_5/inference_time ▁
+wandb:   sample_5/l2_error_pressure ▁
+wandb:   sample_5/l2_error_velocity ▁
+wandb:        sample_5/mse_pressure ▁
+wandb:    sample_5/pred_coefficient ▁
+wandb:         sample_50/coef_error ▁
+wandb:     sample_50/gt_coefficient ▁
+wandb:     sample_50/inference_time ▁
+wandb:  sample_50/l2_error_pressure ▁
+wandb:  sample_50/l2_error_velocity ▁
+wandb:       sample_50/mse_pressure ▁
+wandb:   sample_50/pred_coefficient ▁
+wandb:         sample_51/coef_error ▁
+wandb:     sample_51/gt_coefficient ▁
+wandb:     sample_51/inference_time ▁
+wandb:  sample_51/l2_error_pressure ▁
+wandb:  sample_51/l2_error_velocity ▁
+wandb:       sample_51/mse_pressure ▁
+wandb:   sample_51/pred_coefficient ▁
+wandb:         sample_52/coef_error ▁
+wandb:     sample_52/gt_coefficient ▁
+wandb:     sample_52/inference_time ▁
+wandb:  sample_52/l2_error_pressure ▁
+wandb:  sample_52/l2_error_velocity ▁
+wandb:       sample_52/mse_pressure ▁
+wandb:   sample_52/pred_coefficient ▁
+wandb:         sample_53/coef_error ▁
+wandb:     sample_53/gt_coefficient ▁
+wandb:     sample_53/inference_time ▁
+wandb:  sample_53/l2_error_pressure ▁
+wandb:  sample_53/l2_error_velocity ▁
+wandb:       sample_53/mse_pressure ▁
+wandb:   sample_53/pred_coefficient ▁
+wandb:         sample_54/coef_error ▁
+wandb:     sample_54/gt_coefficient ▁
+wandb:     sample_54/inference_time ▁
+wandb:  sample_54/l2_error_pressure ▁
+wandb:  sample_54/l2_error_velocity ▁
+wandb:       sample_54/mse_pressure ▁
+wandb:   sample_54/pred_coefficient ▁
+wandb:         sample_55/coef_error ▁
+wandb:     sample_55/gt_coefficient ▁
+wandb:     sample_55/inference_time ▁
+wandb:  sample_55/l2_error_pressure ▁
+wandb:  sample_55/l2_error_velocity ▁
+wandb:       sample_55/mse_pressure ▁
+wandb:   sample_55/pred_coefficient ▁
+wandb:         sample_56/coef_error ▁
+wandb:     sample_56/gt_coefficient ▁
+wandb:     sample_56/inference_time ▁
+wandb:  sample_56/l2_error_pressure ▁
+wandb:  sample_56/l2_error_velocity ▁
+wandb:       sample_56/mse_pressure ▁
+wandb:   sample_56/pred_coefficient ▁
+wandb:         sample_57/coef_error ▁
+wandb:     sample_57/gt_coefficient ▁
+wandb:     sample_57/inference_time ▁
+wandb:  sample_57/l2_error_pressure ▁
+wandb:  sample_57/l2_error_velocity ▁
+wandb:       sample_57/mse_pressure ▁
+wandb:   sample_57/pred_coefficient ▁
+wandb:         sample_58/coef_error ▁
+wandb:     sample_58/gt_coefficient ▁
+wandb:     sample_58/inference_time ▁
+wandb:  sample_58/l2_error_pressure ▁
+wandb:  sample_58/l2_error_velocity ▁
+wandb:       sample_58/mse_pressure ▁
+wandb:   sample_58/pred_coefficient ▁
+wandb:         sample_59/coef_error ▁
+wandb:     sample_59/gt_coefficient ▁
+wandb:     sample_59/inference_time ▁
+wandb:  sample_59/l2_error_pressure ▁
+wandb:  sample_59/l2_error_velocity ▁
+wandb:       sample_59/mse_pressure ▁
+wandb:   sample_59/pred_coefficient ▁
+wandb:          sample_6/coef_error ▁
+wandb:      sample_6/gt_coefficient ▁
+wandb:      sample_6/inference_time ▁
+wandb:   sample_6/l2_error_pressure ▁
+wandb:   sample_6/l2_error_velocity ▁
+wandb:        sample_6/mse_pressure ▁
+wandb:    sample_6/pred_coefficient ▁
+wandb:         sample_60/coef_error ▁
+wandb:     sample_60/gt_coefficient ▁
+wandb:     sample_60/inference_time ▁
+wandb:  sample_60/l2_error_pressure ▁
+wandb:  sample_60/l2_error_velocity ▁
+wandb:       sample_60/mse_pressure ▁
+wandb:   sample_60/pred_coefficient ▁
+wandb:         sample_61/coef_error ▁
+wandb:     sample_61/gt_coefficient ▁
+wandb:     sample_61/inference_time ▁
+wandb:  sample_61/l2_error_pressure ▁
+wandb:  sample_61/l2_error_velocity ▁
+wandb:       sample_61/mse_pressure ▁
+wandb:   sample_61/pred_coefficient ▁
+wandb:         sample_62/coef_error ▁
+wandb:     sample_62/gt_coefficient ▁
+wandb:     sample_62/inference_time ▁
+wandb:  sample_62/l2_error_pressure ▁
+wandb:  sample_62/l2_error_velocity ▁
+wandb:       sample_62/mse_pressure ▁
+wandb:   sample_62/pred_coefficient ▁
+wandb:         sample_63/coef_error ▁
+wandb:     sample_63/gt_coefficient ▁
+wandb:     sample_63/inference_time ▁
+wandb:  sample_63/l2_error_pressure ▁
+wandb:  sample_63/l2_error_velocity ▁
+wandb:       sample_63/mse_pressure ▁
+wandb:   sample_63/pred_coefficient ▁
+wandb:         sample_64/coef_error ▁
+wandb:     sample_64/gt_coefficient ▁
+wandb:     sample_64/inference_time ▁
+wandb:  sample_64/l2_error_pressure ▁
+wandb:  sample_64/l2_error_velocity ▁
+wandb:       sample_64/mse_pressure ▁
+wandb:   sample_64/pred_coefficient ▁
+wandb:         sample_65/coef_error ▁
+wandb:     sample_65/gt_coefficient ▁
+wandb:     sample_65/inference_time ▁
+wandb:  sample_65/l2_error_pressure ▁
+wandb:  sample_65/l2_error_velocity ▁
+wandb:       sample_65/mse_pressure ▁
+wandb:   sample_65/pred_coefficient ▁
+wandb:         sample_66/coef_error ▁
+wandb:     sample_66/gt_coefficient ▁
+wandb:     sample_66/inference_time ▁
+wandb:  sample_66/l2_error_pressure ▁
+wandb:  sample_66/l2_error_velocity ▁
+wandb:       sample_66/mse_pressure ▁
+wandb:   sample_66/pred_coefficient ▁
+wandb:         sample_67/coef_error ▁
+wandb:     sample_67/gt_coefficient ▁
+wandb:     sample_67/inference_time ▁
+wandb:  sample_67/l2_error_pressure ▁
+wandb:  sample_67/l2_error_velocity ▁
+wandb:       sample_67/mse_pressure ▁
+wandb:   sample_67/pred_coefficient ▁
+wandb:         sample_68/coef_error ▁
+wandb:     sample_68/gt_coefficient ▁
+wandb:     sample_68/inference_time ▁
+wandb:  sample_68/l2_error_pressure ▁
+wandb:  sample_68/l2_error_velocity ▁
+wandb:       sample_68/mse_pressure ▁
+wandb:   sample_68/pred_coefficient ▁
+wandb:         sample_69/coef_error ▁
+wandb:     sample_69/gt_coefficient ▁
+wandb:     sample_69/inference_time ▁
+wandb:  sample_69/l2_error_pressure ▁
+wandb:  sample_69/l2_error_velocity ▁
+wandb:       sample_69/mse_pressure ▁
+wandb:   sample_69/pred_coefficient ▁
+wandb:          sample_7/coef_error ▁
+wandb:      sample_7/gt_coefficient ▁
+wandb:      sample_7/inference_time ▁
+wandb:   sample_7/l2_error_pressure ▁
+wandb:   sample_7/l2_error_velocity ▁
+wandb:        sample_7/mse_pressure ▁
+wandb:    sample_7/pred_coefficient ▁
+wandb:         sample_70/coef_error ▁
+wandb:     sample_70/gt_coefficient ▁
+wandb:     sample_70/inference_time ▁
+wandb:  sample_70/l2_error_pressure ▁
+wandb:  sample_70/l2_error_velocity ▁
+wandb:       sample_70/mse_pressure ▁
+wandb:   sample_70/pred_coefficient ▁
+wandb:         sample_71/coef_error ▁
+wandb:     sample_71/gt_coefficient ▁
+wandb:     sample_71/inference_time ▁
+wandb:  sample_71/l2_error_pressure ▁
+wandb:  sample_71/l2_error_velocity ▁
+wandb:       sample_71/mse_pressure ▁
+wandb:   sample_71/pred_coefficient ▁
+wandb:         sample_72/coef_error ▁
+wandb:     sample_72/gt_coefficient ▁
+wandb:     sample_72/inference_time ▁
+wandb:  sample_72/l2_error_pressure ▁
+wandb:  sample_72/l2_error_velocity ▁
+wandb:       sample_72/mse_pressure ▁
+wandb:   sample_72/pred_coefficient ▁
+wandb:         sample_73/coef_error ▁
+wandb:     sample_73/gt_coefficient ▁
+wandb:     sample_73/inference_time ▁
+wandb:  sample_73/l2_error_pressure ▁
+wandb:  sample_73/l2_error_velocity ▁
+wandb:       sample_73/mse_pressure ▁
+wandb:   sample_73/pred_coefficient ▁
+wandb:         sample_74/coef_error ▁
+wandb:     sample_74/gt_coefficient ▁
+wandb:     sample_74/inference_time ▁
+wandb:  sample_74/l2_error_pressure ▁
+wandb:  sample_74/l2_error_velocity ▁
+wandb:       sample_74/mse_pressure ▁
+wandb:   sample_74/pred_coefficient ▁
+wandb:         sample_75/coef_error ▁
+wandb:     sample_75/gt_coefficient ▁
+wandb:     sample_75/inference_time ▁
+wandb:  sample_75/l2_error_pressure ▁
+wandb:  sample_75/l2_error_velocity ▁
+wandb:       sample_75/mse_pressure ▁
+wandb:   sample_75/pred_coefficient ▁
+wandb:         sample_76/coef_error ▁
+wandb:     sample_76/gt_coefficient ▁
+wandb:     sample_76/inference_time ▁
+wandb:  sample_76/l2_error_pressure ▁
+wandb:  sample_76/l2_error_velocity ▁
+wandb:       sample_76/mse_pressure ▁
+wandb:   sample_76/pred_coefficient ▁
+wandb:         sample_77/coef_error ▁
+wandb:     sample_77/gt_coefficient ▁
+wandb:     sample_77/inference_time ▁
+wandb:  sample_77/l2_error_pressure ▁
+wandb:  sample_77/l2_error_velocity ▁
+wandb:       sample_77/mse_pressure ▁
+wandb:   sample_77/pred_coefficient ▁
+wandb:         sample_78/coef_error ▁
+wandb:     sample_78/gt_coefficient ▁
+wandb:     sample_78/inference_time ▁
+wandb:  sample_78/l2_error_pressure ▁
+wandb:  sample_78/l2_error_velocity ▁
+wandb:       sample_78/mse_pressure ▁
+wandb:   sample_78/pred_coefficient ▁
+wandb:         sample_79/coef_error ▁
+wandb:     sample_79/gt_coefficient ▁
+wandb:     sample_79/inference_time ▁
+wandb:  sample_79/l2_error_pressure ▁
+wandb:  sample_79/l2_error_velocity ▁
+wandb:       sample_79/mse_pressure ▁
+wandb:   sample_79/pred_coefficient ▁
+wandb:          sample_8/coef_error ▁
+wandb:      sample_8/gt_coefficient ▁
+wandb:      sample_8/inference_time ▁
+wandb:   sample_8/l2_error_pressure ▁
+wandb:   sample_8/l2_error_velocity ▁
+wandb:        sample_8/mse_pressure ▁
+wandb:    sample_8/pred_coefficient ▁
+wandb:         sample_80/coef_error ▁
+wandb:     sample_80/gt_coefficient ▁
+wandb:     sample_80/inference_time ▁
+wandb:  sample_80/l2_error_pressure ▁
+wandb:  sample_80/l2_error_velocity ▁
+wandb:       sample_80/mse_pressure ▁
+wandb:   sample_80/pred_coefficient ▁
+wandb:         sample_81/coef_error ▁
+wandb:     sample_81/gt_coefficient ▁
+wandb:     sample_81/inference_time ▁
+wandb:  sample_81/l2_error_pressure ▁
+wandb:  sample_81/l2_error_velocity ▁
+wandb:       sample_81/mse_pressure ▁
+wandb:   sample_81/pred_coefficient ▁
+wandb:         sample_82/coef_error ▁
+wandb:     sample_82/gt_coefficient ▁
+wandb:     sample_82/inference_time ▁
+wandb:  sample_82/l2_error_pressure ▁
+wandb:  sample_82/l2_error_velocity ▁
+wandb:       sample_82/mse_pressure ▁
+wandb:   sample_82/pred_coefficient ▁
+wandb:         sample_83/coef_error ▁
+wandb:     sample_83/gt_coefficient ▁
+wandb:     sample_83/inference_time ▁
+wandb:  sample_83/l2_error_pressure ▁
+wandb:  sample_83/l2_error_velocity ▁
+wandb:       sample_83/mse_pressure ▁
+wandb:   sample_83/pred_coefficient ▁
+wandb:         sample_84/coef_error ▁
+wandb:     sample_84/gt_coefficient ▁
+wandb:     sample_84/inference_time ▁
+wandb:  sample_84/l2_error_pressure ▁
+wandb:  sample_84/l2_error_velocity ▁
+wandb:       sample_84/mse_pressure ▁
+wandb:   sample_84/pred_coefficient ▁
+wandb:         sample_85/coef_error ▁
+wandb:     sample_85/gt_coefficient ▁
+wandb:     sample_85/inference_time ▁
+wandb:  sample_85/l2_error_pressure ▁
+wandb:  sample_85/l2_error_velocity ▁
+wandb:       sample_85/mse_pressure ▁
+wandb:   sample_85/pred_coefficient ▁
+wandb:         sample_86/coef_error ▁
+wandb:     sample_86/gt_coefficient ▁
+wandb:     sample_86/inference_time ▁
+wandb:  sample_86/l2_error_pressure ▁
+wandb:  sample_86/l2_error_velocity ▁
+wandb:       sample_86/mse_pressure ▁
+wandb:   sample_86/pred_coefficient ▁
+wandb:         sample_87/coef_error ▁
+wandb:     sample_87/gt_coefficient ▁
+wandb:     sample_87/inference_time ▁
+wandb:  sample_87/l2_error_pressure ▁
+wandb:  sample_87/l2_error_velocity ▁
+wandb:       sample_87/mse_pressure ▁
+wandb:   sample_87/pred_coefficient ▁
+wandb:         sample_88/coef_error ▁
+wandb:     sample_88/gt_coefficient ▁
+wandb:     sample_88/inference_time ▁
+wandb:  sample_88/l2_error_pressure ▁
+wandb:  sample_88/l2_error_velocity ▁
+wandb:       sample_88/mse_pressure ▁
+wandb:   sample_88/pred_coefficient ▁
+wandb:         sample_89/coef_error ▁
+wandb:     sample_89/gt_coefficient ▁
+wandb:     sample_89/inference_time ▁
+wandb:  sample_89/l2_error_pressure ▁
+wandb:  sample_89/l2_error_velocity ▁
+wandb:       sample_89/mse_pressure ▁
+wandb:   sample_89/pred_coefficient ▁
+wandb:          sample_9/coef_error ▁
+wandb:      sample_9/gt_coefficient ▁
+wandb:      sample_9/inference_time ▁
+wandb:   sample_9/l2_error_pressure ▁
+wandb:   sample_9/l2_error_velocity ▁
+wandb:        sample_9/mse_pressure ▁
+wandb:    sample_9/pred_coefficient ▁
+wandb:         sample_90/coef_error ▁
+wandb:     sample_90/gt_coefficient ▁
+wandb:     sample_90/inference_time ▁
+wandb:  sample_90/l2_error_pressure ▁
+wandb:  sample_90/l2_error_velocity ▁
+wandb:       sample_90/mse_pressure ▁
+wandb:   sample_90/pred_coefficient ▁
+wandb:         sample_91/coef_error ▁
+wandb:     sample_91/gt_coefficient ▁
+wandb:     sample_91/inference_time ▁
+wandb:  sample_91/l2_error_pressure ▁
+wandb:  sample_91/l2_error_velocity ▁
+wandb:       sample_91/mse_pressure ▁
+wandb:   sample_91/pred_coefficient ▁
+wandb:         sample_92/coef_error ▁
+wandb:     sample_92/gt_coefficient ▁
+wandb:     sample_92/inference_time ▁
+wandb:  sample_92/l2_error_pressure ▁
+wandb:  sample_92/l2_error_velocity ▁
+wandb:       sample_92/mse_pressure ▁
+wandb:   sample_92/pred_coefficient ▁
+wandb:         sample_93/coef_error ▁
+wandb:     sample_93/gt_coefficient ▁
+wandb:     sample_93/inference_time ▁
+wandb:  sample_93/l2_error_pressure ▁
+wandb:  sample_93/l2_error_velocity ▁
+wandb:       sample_93/mse_pressure ▁
+wandb:   sample_93/pred_coefficient ▁
+wandb:         sample_94/coef_error ▁
+wandb:     sample_94/gt_coefficient ▁
+wandb:     sample_94/inference_time ▁
+wandb:  sample_94/l2_error_pressure ▁
+wandb:  sample_94/l2_error_velocity ▁
+wandb:       sample_94/mse_pressure ▁
+wandb:   sample_94/pred_coefficient ▁
+wandb:         sample_95/coef_error ▁
+wandb:     sample_95/gt_coefficient ▁
+wandb:     sample_95/inference_time ▁
+wandb:  sample_95/l2_error_pressure ▁
+wandb:  sample_95/l2_error_velocity ▁
+wandb:       sample_95/mse_pressure ▁
+wandb:   sample_95/pred_coefficient ▁
+wandb:         sample_96/coef_error ▁
+wandb:     sample_96/gt_coefficient ▁
+wandb:     sample_96/inference_time ▁
+wandb:  sample_96/l2_error_pressure ▁
+wandb:  sample_96/l2_error_velocity ▁
+wandb:       sample_96/mse_pressure ▁
+wandb:   sample_96/pred_coefficient ▁
+wandb:         sample_97/coef_error ▁
+wandb:     sample_97/gt_coefficient ▁
+wandb:     sample_97/inference_time ▁
+wandb:  sample_97/l2_error_pressure ▁
+wandb:  sample_97/l2_error_velocity ▁
+wandb:       sample_97/mse_pressure ▁
+wandb:   sample_97/pred_coefficient ▁
+wandb:         sample_98/coef_error ▁
+wandb:     sample_98/gt_coefficient ▁
+wandb:     sample_98/inference_time ▁
+wandb:  sample_98/l2_error_pressure ▁
+wandb:  sample_98/l2_error_velocity ▁
+wandb:       sample_98/mse_pressure ▁
+wandb:   sample_98/pred_coefficient ▁
+wandb:         sample_99/coef_error ▁
+wandb:     sample_99/gt_coefficient ▁
+wandb:     sample_99/inference_time ▁
+wandb:  sample_99/l2_error_pressure ▁
+wandb:  sample_99/l2_error_velocity ▁
+wandb:       sample_99/mse_pressure ▁
+wandb:   sample_99/pred_coefficient ▁
+wandb:    summary/l2_error_pressure ▁
+wandb:    summary/l2_error_velocity ▁
+wandb:      summary/mean_coef_error ▁
+wandb:  summary/mean_inference_time ▁
+wandb:        summary/rmse_pressure ▁
+wandb:   summary/rmse_velocity_mean ▁
+wandb: summary/spearman_correlation ▁
+wandb:        summary/total_samples ▁
+wandb: 
+wandb: Run summary:
+wandb:          sample_0/coef_error 0.15998
+wandb:            sample_0/filename param0/1768f55a3c29c...
+wandb:      sample_0/gt_coefficient 0.2131
+wandb:      sample_0/inference_time 0.43162
+wandb:   sample_0/l2_error_pressure 0.13481
+wandb:   sample_0/l2_error_velocity 0.0982
+wandb:        sample_0/mse_pressure 0.18369
+wandb:    sample_0/pred_coefficient 0.179
+wandb:          sample_1/coef_error 0.19631
+wandb:            sample_1/filename param0/10716a366de70...
+wandb:      sample_1/gt_coefficient 0.24815
+wandb:      sample_1/inference_time 0.05931
+wandb:   sample_1/l2_error_pressure 0.19835
+wandb:   sample_1/l2_error_velocity 0.12134
+wandb:        sample_1/mse_pressure 0.27251
+wandb:    sample_1/pred_coefficient 0.29686
+wandb:         sample_10/coef_error 0.21224
+wandb:           sample_10/filename param0/180d1e3463c29...
+wandb:     sample_10/gt_coefficient 0.28313
+wandb:     sample_10/inference_time 0.05931
+wandb:  sample_10/l2_error_pressure 0.17533
+wandb:  sample_10/l2_error_velocity 0.11362
+wandb:       sample_10/mse_pressure 0.28235
+wandb:   sample_10/pred_coefficient 0.34322
+wandb:         sample_11/coef_error 0.10462
+wandb:           sample_11/filename param0/1ab80bc91a45b...
+wandb:     sample_11/gt_coefficient 0.2958
+wandb:     sample_11/inference_time 0.05826
+wandb:  sample_11/l2_error_pressure 0.15195
+wandb:  sample_11/l2_error_velocity 0.10015
+wandb:       sample_11/mse_pressure 0.30587
+wandb:   sample_11/pred_coefficient 0.26485
+wandb:         sample_12/coef_error 0.07314
+wandb:           sample_12/filename param0/1acfbda4ce0ec...
+wandb:     sample_12/gt_coefficient 0.25615
+wandb:     sample_12/inference_time 0.0579
+wandb:  sample_12/l2_error_pressure 0.13083
+wandb:  sample_12/l2_error_velocity 0.05843
+wandb:       sample_12/mse_pressure 0.13268
+wandb:   sample_12/pred_coefficient 0.27489
+wandb:         sample_13/coef_error 0.02365
+wandb:           sample_13/filename param0/165aec174bb93...
+wandb:     sample_13/gt_coefficient 0.32478
+wandb:     sample_13/inference_time 0.05503
+wandb:  sample_13/l2_error_pressure 0.07404
+wandb:  sample_13/l2_error_velocity 0.03683
+wandb:       sample_13/mse_pressure 0.05316
+wandb:   sample_13/pred_coefficient 0.33246
+wandb:         sample_14/coef_error 0.06837
+wandb:           sample_14/filename param0/19042f5a90290...
+wandb:     sample_14/gt_coefficient 0.28585
+wandb:     sample_14/inference_time 0.05792
+wandb:  sample_14/l2_error_pressure 0.11224
+wandb:  sample_14/l2_error_velocity 0.04819
+wandb:       sample_14/mse_pressure 0.10248
+wandb:   sample_14/pred_coefficient 0.30539
+wandb:         sample_15/coef_error 0.19999
+wandb:           sample_15/filename param0/1724ae84377e0...
+wandb:     sample_15/gt_coefficient 0.24584
+wandb:     sample_15/inference_time 0.05937
+wandb:  sample_15/l2_error_pressure 0.22922
+wandb:  sample_15/l2_error_velocity 0.12281
+wandb:       sample_15/mse_pressure 0.44521
+wandb:   sample_15/pred_coefficient 0.29501
+wandb:         sample_16/coef_error 0.14093
+wandb:           sample_16/filename param0/175a289947f54...
+wandb:     sample_16/gt_coefficient 0.23724
+wandb:     sample_16/inference_time 0.05955
+wandb:  sample_16/l2_error_pressure 0.13435
+wandb:  sample_16/l2_error_velocity 0.07129
+wandb:       sample_16/mse_pressure 0.13114
+wandb:   sample_16/pred_coefficient 0.27067
+wandb:         sample_17/coef_error 0.05222
+wandb:           sample_17/filename param0/1cf17a1e1841d...
+wandb:     sample_17/gt_coefficient 0.28181
+wandb:     sample_17/inference_time 0.0554
+wandb:  sample_17/l2_error_pressure 0.09708
+wandb:  sample_17/l2_error_velocity 0.07639
+wandb:       sample_17/mse_pressure 0.08635
+wandb:   sample_17/pred_coefficient 0.2671
+wandb:         sample_18/coef_error 0.02289
+wandb:           sample_18/filename param0/12d7c4013415e...
+wandb:     sample_18/gt_coefficient 0.29376
+wandb:     sample_18/inference_time 0.05753
+wandb:  sample_18/l2_error_pressure 0.10671
+wandb:  sample_18/l2_error_velocity 0.04393
+wandb:       sample_18/mse_pressure 0.08074
+wandb:   sample_18/pred_coefficient 0.30048
+wandb:         sample_19/coef_error 0.09212
+wandb:           sample_19/filename param0/158a95b4da25a...
+wandb:     sample_19/gt_coefficient 0.2453
+wandb:     sample_19/inference_time 0.05781
+wandb:  sample_19/l2_error_pressure 0.10678
+wandb:  sample_19/l2_error_velocity 0.06335
+wandb:       sample_19/mse_pressure 0.09038
+wandb:   sample_19/pred_coefficient 0.2679
+wandb:          sample_2/coef_error 0.07995
+wandb:            sample_2/filename param0/10e99b1475098...
+wandb:      sample_2/gt_coefficient 0.25603
+wandb:      sample_2/inference_time 0.05707
+wandb:   sample_2/l2_error_pressure 0.07896
+wandb:   sample_2/l2_error_velocity 0.05991
+wandb:        sample_2/mse_pressure 0.0526
+wandb:    sample_2/pred_coefficient 0.23557
+wandb:         sample_20/coef_error 0.03849
+wandb:           sample_20/filename param0/1104f0924e03f...
+wandb:     sample_20/gt_coefficient 0.2509
+wandb:     sample_20/inference_time 0.05602
+wandb:  sample_20/l2_error_pressure 0.0824
+wandb:  sample_20/l2_error_velocity 0.0369
+wandb:       sample_20/mse_pressure 0.05522
+wandb:   sample_20/pred_coefficient 0.26056
+wandb:         sample_21/coef_error 0.19786
+wandb:           sample_21/filename param0/1b85c850cb4b9...
+wandb:     sample_21/gt_coefficient 0.24922
+wandb:     sample_21/inference_time 0.05622
+wandb:  sample_21/l2_error_pressure 0.15374
+wandb:  sample_21/l2_error_velocity 0.0741
+wandb:       sample_21/mse_pressure 0.27962
+wandb:   sample_21/pred_coefficient 0.29853
+wandb:         sample_22/coef_error 0.1639
+wandb:           sample_22/filename param0/17600a4881b1f...
+wandb:     sample_22/gt_coefficient 0.21967
+wandb:     sample_22/inference_time 0.06233
+wandb:  sample_22/l2_error_pressure 0.2064
+wandb:  sample_22/l2_error_velocity 0.1654
+wandb:       sample_22/mse_pressure 0.32788
+wandb:   sample_22/pred_coefficient 0.25567
+wandb:         sample_23/coef_error 0.02423
+wandb:           sample_23/filename param0/198d8e274c595...
+wandb:     sample_23/gt_coefficient 0.46443
+wandb:     sample_23/inference_time 0.06075
+wandb:  sample_23/l2_error_pressure 0.13958
+wandb:  sample_23/l2_error_velocity 0.07666
+wandb:       sample_23/mse_pressure 0.15303
+wandb:   sample_23/pred_coefficient 0.47568
+wandb:         sample_24/coef_error 0.21949
+wandb:           sample_24/filename param0/1328a95d69cef...
+wandb:     sample_24/gt_coefficient 0.32203
+wandb:     sample_24/inference_time 0.06013
+wandb:  sample_24/l2_error_pressure 0.18797
+wandb:  sample_24/l2_error_velocity 0.11532
+wandb:       sample_24/mse_pressure 0.30651
+wandb:   sample_24/pred_coefficient 0.39272
+wandb:         sample_25/coef_error 0.08527
+wandb:           sample_25/filename param0/109567d7d55b8...
+wandb:     sample_25/gt_coefficient 0.23542
+wandb:     sample_25/inference_time 0.05443
+wandb:  sample_25/l2_error_pressure 0.09546
+wandb:  sample_25/l2_error_velocity 0.09166
+wandb:       sample_25/mse_pressure 0.09188
+wandb:   sample_25/pred_coefficient 0.21535
+wandb:         sample_26/coef_error 0.17101
+wandb:           sample_26/filename param0/1c53bc6a3992b...
+wandb:     sample_26/gt_coefficient 0.222
+wandb:     sample_26/inference_time 0.06008
+wandb:  sample_26/l2_error_pressure 0.23569
+wandb:  sample_26/l2_error_velocity 0.14591
+wandb:       sample_26/mse_pressure 0.40398
+wandb:   sample_26/pred_coefficient 0.25997
+wandb:         sample_27/coef_error 0.00439
+wandb:           sample_27/filename param0/12d463649ed6c...
+wandb:     sample_27/gt_coefficient 0.25077
+wandb:     sample_27/inference_time 0.05995
+wandb:  sample_27/l2_error_pressure 0.1737
+wandb:  sample_27/l2_error_velocity 0.08868
+wandb:       sample_27/mse_pressure 0.22591
+wandb:   sample_27/pred_coefficient 0.24967
+wandb:         sample_28/coef_error 0.09325
+wandb:           sample_28/filename param0/12cd99c20b1a5...
+wandb:     sample_28/gt_coefficient 0.27566
+wandb:     sample_28/inference_time 0.05785
+wandb:  sample_28/l2_error_pressure 0.09264
+wandb:  sample_28/l2_error_velocity 0.04199
+wandb:       sample_28/mse_pressure 0.07744
+wandb:   sample_28/pred_coefficient 0.30137
+wandb:         sample_29/coef_error 0.0947
+wandb:           sample_29/filename param0/1100f9eac1ca4...
+wandb:     sample_29/gt_coefficient 0.27265
+wandb:     sample_29/inference_time 0.06143
+wandb:  sample_29/l2_error_pressure 0.21961
+wandb:  sample_29/l2_error_velocity 0.16185
+wandb:       sample_29/mse_pressure 0.39107
+wandb:   sample_29/pred_coefficient 0.29847
+wandb:          sample_3/coef_error 0.06266
+wandb:            sample_3/filename param0/156d474856099...
+wandb:      sample_3/gt_coefficient 0.42664
+wandb:      sample_3/inference_time 0.05969
+wandb:   sample_3/l2_error_pressure 0.11155
+wandb:   sample_3/l2_error_velocity 0.06611
+wandb:        sample_3/mse_pressure 0.1179
+wandb:    sample_3/pred_coefficient 0.3999
+wandb:         sample_30/coef_error 0.05262
+wandb:           sample_30/filename param0/1c4590ebc214e...
+wandb:     sample_30/gt_coefficient 0.23085
+wandb:     sample_30/inference_time 0.05607
+wandb:  sample_30/l2_error_pressure 0.07162
+wandb:  sample_30/l2_error_velocity 0.03729
+wandb:       sample_30/mse_pressure 0.04043
+wandb:   sample_30/pred_coefficient 0.243
+wandb:         sample_31/coef_error 0.12202
+wandb:           sample_31/filename param0/19cd3489f05d2...
+wandb:     sample_31/gt_coefficient 0.26838
+wandb:     sample_31/inference_time 0.05673
+wandb:  sample_31/l2_error_pressure 0.12766
+wandb:  sample_31/l2_error_velocity 0.07553
+wandb:       sample_31/mse_pressure 0.14847
+wandb:   sample_31/pred_coefficient 0.30113
+wandb:         sample_32/coef_error 0.03091
+wandb:           sample_32/filename param0/139df45393b68...
+wandb:     sample_32/gt_coefficient 0.41527
+wandb:     sample_32/inference_time 0.0601
+wandb:  sample_32/l2_error_pressure 0.10577
+wandb:  sample_32/l2_error_velocity 0.08854
+wandb:       sample_32/mse_pressure 0.12342
+wandb:   sample_32/pred_coefficient 0.40244
+wandb:         sample_33/coef_error 0.20297
+wandb:           sample_33/filename param0/18d2959d79af0...
+wandb:     sample_33/gt_coefficient 0.26462
+wandb:     sample_33/inference_time 0.05851
+wandb:  sample_33/l2_error_pressure 0.18369
+wandb:  sample_33/l2_error_velocity 0.11507
+wandb:       sample_33/mse_pressure 0.28154
+wandb:   sample_33/pred_coefficient 0.31833
+wandb:         sample_34/coef_error 0.23015
+wandb:           sample_34/filename param0/1c66dbe15a6be...
+wandb:     sample_34/gt_coefficient 0.23795
+wandb:     sample_34/inference_time 0.06061
+wandb:  sample_34/l2_error_pressure 0.17967
+wandb:  sample_34/l2_error_velocity 0.10838
+wandb:       sample_34/mse_pressure 0.24281
+wandb:   sample_34/pred_coefficient 0.29271
+wandb:         sample_35/coef_error 0.19336
+wandb:           sample_35/filename param0/11dba0c2ec812...
+wandb:     sample_35/gt_coefficient 0.22189
+wandb:     sample_35/inference_time 0.06081
+wandb:  sample_35/l2_error_pressure 0.23532
+wandb:  sample_35/l2_error_velocity 0.15813
+wandb:       sample_35/mse_pressure 0.35668
+wandb:   sample_35/pred_coefficient 0.26479
+wandb:         sample_36/coef_error 0.00457
+wandb:           sample_36/filename param0/193ec1089f0a9...
+wandb:     sample_36/gt_coefficient 0.31919
+wandb:     sample_36/inference_time 0.05477
+wandb:  sample_36/l2_error_pressure 0.0674
+wandb:  sample_36/l2_error_velocity 0.05023
+wandb:       sample_36/mse_pressure 0.04384
+wandb:   sample_36/pred_coefficient 0.31773
+wandb:         sample_37/coef_error 0.09599
+wandb:           sample_37/filename param0/10555502fa7b3...
+wandb:     sample_37/gt_coefficient 0.28159
+wandb:     sample_37/inference_time 0.05887
+wandb:  sample_37/l2_error_pressure 0.13302
+wandb:  sample_37/l2_error_velocity 0.06407
+wandb:       sample_37/mse_pressure 0.1455
+wandb:   sample_37/pred_coefficient 0.30862
+wandb:         sample_38/coef_error 0.10501
+wandb:           sample_38/filename param0/1a56d596c77ad...
+wandb:     sample_38/gt_coefficient 0.57301
+wandb:     sample_38/inference_time 0.0601
+wandb:  sample_38/l2_error_pressure 0.16195
+wandb:  sample_38/l2_error_velocity 0.11285
+wandb:       sample_38/mse_pressure 0.2864
+wandb:   sample_38/pred_coefficient 0.51284
+wandb:         sample_39/coef_error 0.0178
+wandb:           sample_39/filename param0/1cff510c0630c...
+wandb:     sample_39/gt_coefficient 0.24261
+wandb:     sample_39/inference_time 0.05805
+wandb:  sample_39/l2_error_pressure 0.07208
+wandb:  sample_39/l2_error_velocity 0.05379
+wandb:       sample_39/mse_pressure 0.04433
+wandb:   sample_39/pred_coefficient 0.24693
+wandb:          sample_4/coef_error 0.18929
+wandb:            sample_4/filename param0/1641efa5c9251...
+wandb:      sample_4/gt_coefficient 0.26733
+wandb:      sample_4/inference_time 0.0597
+wandb:   sample_4/l2_error_pressure 0.19038
+wandb:   sample_4/l2_error_velocity 0.1162
+wandb:        sample_4/mse_pressure 0.28573
+wandb:    sample_4/pred_coefficient 0.31793
+wandb:         sample_40/coef_error 0.09725
+wandb:           sample_40/filename param0/1176dff7f0ec8...
+wandb:     sample_40/gt_coefficient 0.30657
+wandb:     sample_40/inference_time 0.05596
+wandb:  sample_40/l2_error_pressure 0.15096
+wandb:  sample_40/l2_error_velocity 0.06511
+wandb:       sample_40/mse_pressure 0.20639
+wandb:   sample_40/pred_coefficient 0.33639
+wandb:         sample_41/coef_error 0.0281
+wandb:           sample_41/filename param0/11a96098620b2...
+wandb:     sample_41/gt_coefficient 0.2721
+wandb:     sample_41/inference_time 0.05708
+wandb:  sample_41/l2_error_pressure 0.08989
+wandb:  sample_41/l2_error_velocity 0.03849
+wandb:       sample_41/mse_pressure 0.05832
+wandb:   sample_41/pred_coefficient 0.27975
+wandb:         sample_42/coef_error 0.00523
+wandb:           sample_42/filename param0/1159faf9bf789...
+wandb:     sample_42/gt_coefficient 0.20057
+wandb:     sample_42/inference_time 0.05468
+wandb:  sample_42/l2_error_pressure 0.12693
+wandb:  sample_42/l2_error_velocity 0.07225
+wandb:       sample_42/mse_pressure 0.15117
+wandb:   sample_42/pred_coefficient 0.19953
+wandb:         sample_43/coef_error 0.13805
+wandb:           sample_43/filename param0/100715345ee54...
+wandb:     sample_43/gt_coefficient 0.26577
+wandb:     sample_43/inference_time 0.05765
+wandb:  sample_43/l2_error_pressure 0.11981
+wandb:  sample_43/l2_error_velocity 0.05294
+wandb:       sample_43/mse_pressure 0.12029
+wandb:   sample_43/pred_coefficient 0.30245
+wandb:         sample_44/coef_error 0.10368
+wandb:           sample_44/filename param0/18e16129375e7...
+wandb:     sample_44/gt_coefficient 0.30838
+wandb:     sample_44/inference_time 0.05758
+wandb:  sample_44/l2_error_pressure 0.11418
+wandb:  sample_44/l2_error_velocity 0.05843
+wandb:       sample_44/mse_pressure 0.11497
+wandb:   sample_44/pred_coefficient 0.34035
+wandb:         sample_45/coef_error 0.03399
+wandb:           sample_45/filename param0/192fdf42f5a26...
+wandb:     sample_45/gt_coefficient 0.26939
+wandb:     sample_45/inference_time 0.05511
+wandb:  sample_45/l2_error_pressure 0.08068
+wandb:  sample_45/l2_error_velocity 0.07408
+wandb:       sample_45/mse_pressure 0.06332
+wandb:   sample_45/pred_coefficient 0.26024
+wandb:         sample_46/coef_error 0.07466
+wandb:           sample_46/filename param0/18927999d0c5a...
+wandb:     sample_46/gt_coefficient 0.24646
+wandb:     sample_46/inference_time 0.05679
+wandb:  sample_46/l2_error_pressure 0.08776
+wandb:  sample_46/l2_error_velocity 0.03201
+wandb:       sample_46/mse_pressure 0.06346
+wandb:   sample_46/pred_coefficient 0.26486
+wandb:         sample_47/coef_error 0.11053
+wandb:           sample_47/filename param0/137f67657cdc9...
+wandb:     sample_47/gt_coefficient 0.23148
+wandb:     sample_47/inference_time 0.05141
+wandb:  sample_47/l2_error_pressure 0.14815
+wandb:  sample_47/l2_error_velocity 0.0938
+wandb:       sample_47/mse_pressure 0.2885
+wandb:   sample_47/pred_coefficient 0.2059
+wandb:         sample_48/coef_error 0.07847
+wandb:           sample_48/filename param0/147889b73fa49...
+wandb:     sample_48/gt_coefficient 0.25713
+wandb:     sample_48/inference_time 0.05561
+wandb:  sample_48/l2_error_pressure 0.08469
+wandb:  sample_48/l2_error_velocity 0.03154
+wandb:       sample_48/mse_pressure 0.06261
+wandb:   sample_48/pred_coefficient 0.2773
+wandb:         sample_49/coef_error 0.17485
+wandb:           sample_49/filename param0/139718b631cbc...
+wandb:     sample_49/gt_coefficient 0.2725
+wandb:     sample_49/inference_time 0.06114
+wandb:  sample_49/l2_error_pressure 0.24644
+wandb:  sample_49/l2_error_velocity 0.16585
+wandb:       sample_49/mse_pressure 0.4204
+wandb:   sample_49/pred_coefficient 0.32014
+wandb:          sample_5/coef_error 0.1015
+wandb:            sample_5/filename param0/11d1fdaedf3ab...
+wandb:      sample_5/gt_coefficient 0.34365
+wandb:      sample_5/inference_time 0.06048
+wandb:   sample_5/l2_error_pressure 0.13477
+wandb:   sample_5/l2_error_velocity 0.06605
+wandb:        sample_5/mse_pressure 0.16707
+wandb:    sample_5/pred_coefficient 0.37853
+wandb:         sample_50/coef_error 0.03087
+wandb:           sample_50/filename param0/1782558e47730...
+wandb:     sample_50/gt_coefficient 0.29765
+wandb:     sample_50/inference_time 0.05704
+wandb:  sample_50/l2_error_pressure 0.05197
+wandb:  sample_50/l2_error_velocity 0.0316
+wandb:       sample_50/mse_pressure 0.02376
+wandb:   sample_50/pred_coefficient 0.30684
+wandb:         sample_51/coef_error 0.12177
+wandb:           sample_51/filename param0/1bb6b1ff46096...
+wandb:     sample_51/gt_coefficient 0.2532
+wandb:     sample_51/inference_time 0.05742
+wandb:  sample_51/l2_error_pressure 0.11895
+wandb:  sample_51/l2_error_velocity 0.05579
+wandb:       sample_51/mse_pressure 0.1058
+wandb:   sample_51/pred_coefficient 0.28404
+wandb:         sample_52/coef_error 0.09885
+wandb:           sample_52/filename param0/19d0843797b8b...
+wandb:     sample_52/gt_coefficient 0.26755
+wandb:     sample_52/inference_time 0.05842
+wandb:  sample_52/l2_error_pressure 0.11071
+wandb:  sample_52/l2_error_velocity 0.05834
+wandb:       sample_52/mse_pressure 0.10365
+wandb:   sample_52/pred_coefficient 0.294
+wandb:         sample_53/coef_error 0.12097
+wandb:           sample_53/filename param0/1abeca7159db7...
+wandb:     sample_53/gt_coefficient 0.25951
+wandb:     sample_53/inference_time 0.0574
+wandb:  sample_53/l2_error_pressure 0.11437
+wandb:  sample_53/l2_error_velocity 0.04842
+wandb:       sample_53/mse_pressure 0.11301
+wandb:   sample_53/pred_coefficient 0.2909
+wandb:         sample_54/coef_error 0.12773
+wandb:           sample_54/filename param0/15c785a750599...
+wandb:     sample_54/gt_coefficient 0.23647
+wandb:     sample_54/inference_time 0.05613
+wandb:  sample_54/l2_error_pressure 0.11754
+wandb:  sample_54/l2_error_velocity 0.05301
+wandb:       sample_54/mse_pressure 0.1095
+wandb:   sample_54/pred_coefficient 0.26668
+wandb:         sample_55/coef_error 0.19603
+wandb:           sample_55/filename param0/12cf05b9f5f2d...
+wandb:     sample_55/gt_coefficient 0.26816
+wandb:     sample_55/inference_time 0.06109
+wandb:  sample_55/l2_error_pressure 0.23162
+wandb:  sample_55/l2_error_velocity 0.15856
+wandb:       sample_55/mse_pressure 0.43447
+wandb:   sample_55/pred_coefficient 0.32072
+wandb:         sample_56/coef_error 0.01607
+wandb:           sample_56/filename param0/15c3b923c85d2...
+wandb:     sample_56/gt_coefficient 0.2756
+wandb:     sample_56/inference_time 0.05429
+wandb:  sample_56/l2_error_pressure 0.067
+wandb:  sample_56/l2_error_velocity 0.04431
+wandb:       sample_56/mse_pressure 0.03726
+wandb:   sample_56/pred_coefficient 0.27117
+wandb:         sample_57/coef_error 0.02796
+wandb:           sample_57/filename param0/1c490bf1c6b32...
+wandb:     sample_57/gt_coefficient 0.26492
+wandb:     sample_57/inference_time 0.056
+wandb:  sample_57/l2_error_pressure 0.1728
+wandb:  sample_57/l2_error_velocity 0.03541
+wandb:       sample_57/mse_pressure 0.23786
+wandb:   sample_57/pred_coefficient 0.27233
+wandb:         sample_58/coef_error 0.23546
+wandb:           sample_58/filename param0/198dfa16ba9f5...
+wandb:     sample_58/gt_coefficient 0.23912
+wandb:     sample_58/inference_time 0.06031
+wandb:  sample_58/l2_error_pressure 0.22376
+wandb:  sample_58/l2_error_velocity 0.13706
+wandb:       sample_58/mse_pressure 0.40356
+wandb:   sample_58/pred_coefficient 0.29542
+wandb:         sample_59/coef_error 0.03496
+wandb:           sample_59/filename param0/19f52dd4592c3...
+wandb:     sample_59/gt_coefficient 0.24577
+wandb:     sample_59/inference_time 0.05514
+wandb:  sample_59/l2_error_pressure 0.07962
+wandb:  sample_59/l2_error_velocity 0.03188
+wandb:       sample_59/mse_pressure 0.05054
+wandb:   sample_59/pred_coefficient 0.25436
+wandb:          sample_6/coef_error 0.25944
+wandb:            sample_6/filename param0/12a034b6be9af...
+wandb:      sample_6/gt_coefficient 0.23526
+wandb:      sample_6/inference_time 0.05931
+wandb:   sample_6/l2_error_pressure 0.19624
+wandb:   sample_6/l2_error_velocity 0.11004
+wandb:        sample_6/mse_pressure 0.37292
+wandb:    sample_6/pred_coefficient 0.29629
+wandb:         sample_60/coef_error 0.12813
+wandb:           sample_60/filename param0/1d4066f8ae88a...
+wandb:     sample_60/gt_coefficient 0.27091
+wandb:     sample_60/inference_time 0.05694
+wandb:  sample_60/l2_error_pressure 0.10963
+wandb:  sample_60/l2_error_velocity 0.0502
+wandb:       sample_60/mse_pressure 0.10309
+wandb:   sample_60/pred_coefficient 0.30562
+wandb:         sample_61/coef_error 0.04734
+wandb:           sample_61/filename param0/1cd50bde9a3e7...
+wandb:     sample_61/gt_coefficient 0.36826
+wandb:     sample_61/inference_time 0.05776
+wandb:  sample_61/l2_error_pressure 0.08991
+wandb:  sample_61/l2_error_velocity 0.05013
+wandb:       sample_61/mse_pressure 0.08374
+wandb:   sample_61/pred_coefficient 0.38569
+wandb:         sample_62/coef_error 0.07348
+wandb:           sample_62/filename param0/18ff13d7f181e...
+wandb:     sample_62/gt_coefficient 0.26229
+wandb:     sample_62/inference_time 0.0573
+wandb:  sample_62/l2_error_pressure 0.10331
+wandb:  sample_62/l2_error_velocity 0.04816
+wandb:       sample_62/mse_pressure 0.0908
+wandb:   sample_62/pred_coefficient 0.28156
+wandb:         sample_63/coef_error 0.1352
+wandb:           sample_63/filename param0/1c6591c3fc686...
+wandb:     sample_63/gt_coefficient 0.28395
+wandb:     sample_63/inference_time 0.05996
+wandb:  sample_63/l2_error_pressure 0.19975
+wandb:  sample_63/l2_error_velocity 0.13205
+wandb:       sample_63/mse_pressure 0.31192
+wandb:   sample_63/pred_coefficient 0.32234
+wandb:         sample_64/coef_error 0.07821
+wandb:           sample_64/filename param0/18aad9d102afb...
+wandb:     sample_64/gt_coefficient 0.25518
+wandb:     sample_64/inference_time 0.05825
+wandb:  sample_64/l2_error_pressure 0.10264
+wandb:  sample_64/l2_error_velocity 0.05928
+wandb:       sample_64/mse_pressure 0.08343
+wandb:   sample_64/pred_coefficient 0.27514
+wandb:         sample_65/coef_error 0.14663
+wandb:           sample_65/filename param0/1089cbe82dc0e...
+wandb:     sample_65/gt_coefficient 0.31103
+wandb:     sample_65/inference_time 0.05919
+wandb:  sample_65/l2_error_pressure 0.09212
+wandb:  sample_65/l2_error_velocity 0.03188
+wandb:       sample_65/mse_pressure 0.06296
+wandb:   sample_65/pred_coefficient 0.26542
+wandb:         sample_66/coef_error 0.0367
+wandb:           sample_66/filename param0/1523402e11400...
+wandb:     sample_66/gt_coefficient 0.36014
+wandb:     sample_66/inference_time 0.05895
+wandb:  sample_66/l2_error_pressure 0.10398
+wandb:  sample_66/l2_error_velocity 0.06845
+wandb:       sample_66/mse_pressure 0.10671
+wandb:   sample_66/pred_coefficient 0.34693
+wandb:         sample_67/coef_error 0.15307
+wandb:           sample_67/filename param0/14ace3e8d05f8...
+wandb:     sample_67/gt_coefficient 0.26189
+wandb:     sample_67/inference_time 0.05989
+wandb:  sample_67/l2_error_pressure 0.19697
+wandb:  sample_67/l2_error_velocity 0.14037
+wandb:       sample_67/mse_pressure 0.29282
+wandb:   sample_67/pred_coefficient 0.30198
+wandb:         sample_68/coef_error 0.01627
+wandb:           sample_68/filename param0/173669aeeba92...
+wandb:     sample_68/gt_coefficient 0.26794
+wandb:     sample_68/inference_time 0.05468
+wandb:  sample_68/l2_error_pressure 0.10208
+wandb:  sample_68/l2_error_velocity 0.04956
+wandb:       sample_68/mse_pressure 0.11324
+wandb:   sample_68/pred_coefficient 0.2723
+wandb:         sample_69/coef_error 0.17517
+wandb:           sample_69/filename param0/171c20ce4de5e...
+wandb:     sample_69/gt_coefficient 0.25856
+wandb:     sample_69/inference_time 0.05976
+wandb:  sample_69/l2_error_pressure 0.21861
+wandb:  sample_69/l2_error_velocity 0.13047
+wandb:       sample_69/mse_pressure 0.38002
+wandb:   sample_69/pred_coefficient 0.30385
+wandb:          sample_7/coef_error 0.05763
+wandb:            sample_7/filename param0/19245fb8ee790...
+wandb:      sample_7/gt_coefficient 0.30933
+wandb:      sample_7/inference_time 0.05577
+wandb:   sample_7/l2_error_pressure 0.08614
+wandb:   sample_7/l2_error_velocity 0.0391
+wandb:        sample_7/mse_pressure 0.07049
+wandb:    sample_7/pred_coefficient 0.32716
+wandb:         sample_70/coef_error 0.01321
+wandb:           sample_70/filename param0/1cde62b063e14...
+wandb:     sample_70/gt_coefficient 0.3137
+wandb:     sample_70/inference_time 0.05885
+wandb:  sample_70/l2_error_pressure 0.12251
+wandb:  sample_70/l2_error_velocity 0.0696
+wandb:       sample_70/mse_pressure 0.16108
+wandb:   sample_70/pred_coefficient 0.31784
+wandb:         sample_71/coef_error 0.07666
+wandb:           sample_71/filename param0/107699ca67fcd...
+wandb:     sample_71/gt_coefficient 0.27836
+wandb:     sample_71/inference_time 0.05978
+wandb:  sample_71/l2_error_pressure 0.09892
+wandb:  sample_71/l2_error_velocity 0.0674
+wandb:       sample_71/mse_pressure 0.07888
+wandb:   sample_71/pred_coefficient 0.29969
+wandb:         sample_72/coef_error 0.03618
+wandb:           sample_72/filename param0/1c1bd2dcbb13a...
+wandb:     sample_72/gt_coefficient 0.2633
+wandb:     sample_72/inference_time 0.05617
+wandb:  sample_72/l2_error_pressure 0.07483
+wandb:  sample_72/l2_error_velocity 0.05951
+wandb:       sample_72/mse_pressure 0.04896
+wandb:   sample_72/pred_coefficient 0.25378
+wandb:         sample_73/coef_error 0.23952
+wandb:           sample_73/filename param0/1213742aa7815...
+wandb:     sample_73/gt_coefficient 0.25615
+wandb:     sample_73/inference_time 0.06029
+wandb:  sample_73/l2_error_pressure 0.22658
+wandb:  sample_73/l2_error_velocity 0.15413
+wandb:       sample_73/mse_pressure 0.40984
+wandb:   sample_73/pred_coefficient 0.31751
+wandb:         sample_74/coef_error 0.1076
+wandb:           sample_74/filename param0/13d090612aec3...
+wandb:     sample_74/gt_coefficient 0.27527
+wandb:     sample_74/inference_time 0.05488
+wandb:  sample_74/l2_error_pressure 0.21707
+wandb:  sample_74/l2_error_velocity 0.0473
+wandb:       sample_74/mse_pressure 0.46876
+wandb:   sample_74/pred_coefficient 0.30488
+wandb:         sample_75/coef_error 0.09788
+wandb:           sample_75/filename param0/10247b51a42b4...
+wandb:     sample_75/gt_coefficient 0.25551
+wandb:     sample_75/inference_time 0.05799
+wandb:  sample_75/l2_error_pressure 0.09967
+wandb:  sample_75/l2_error_velocity 0.05195
+wandb:       sample_75/mse_pressure 0.08264
+wandb:   sample_75/pred_coefficient 0.28052
+wandb:         sample_76/coef_error 0.01853
+wandb:           sample_76/filename param0/16bd0438de54f...
+wandb:     sample_76/gt_coefficient 0.21671
+wandb:     sample_76/inference_time 0.053
+wandb:  sample_76/l2_error_pressure 0.09714
+wandb:  sample_76/l2_error_velocity 0.05033
+wandb:       sample_76/mse_pressure 0.09669
+wandb:   sample_76/pred_coefficient 0.21269
+wandb:         sample_77/coef_error 0.02089
+wandb:           sample_77/filename param0/150f2cf6e9c54...
+wandb:     sample_77/gt_coefficient 0.20362
+wandb:     sample_77/inference_time 0.05228
+wandb:  sample_77/l2_error_pressure 0.07926
+wandb:  sample_77/l2_error_velocity 0.04288
+wandb:       sample_77/mse_pressure 0.0658
+wandb:   sample_77/pred_coefficient 0.19936
+wandb:         sample_78/coef_error 0.12201
+wandb:           sample_78/filename param0/15cc37ac9b3b7...
+wandb:     sample_78/gt_coefficient 0.29008
+wandb:     sample_78/inference_time 0.05955
+wandb:  sample_78/l2_error_pressure 0.14995
+wandb:  sample_78/l2_error_velocity 0.07521
+wandb:       sample_78/mse_pressure 0.17425
+wandb:   sample_78/pred_coefficient 0.32547
+wandb:         sample_79/coef_error 0.11713
+wandb:           sample_79/filename param0/1399eab8ad726...
+wandb:     sample_79/gt_coefficient 0.31769
+wandb:     sample_79/inference_time 0.05767
+wandb:  sample_79/l2_error_pressure 0.19351
+wandb:  sample_79/l2_error_velocity 0.08077
+wandb:       sample_79/mse_pressure 0.33261
+wandb:   sample_79/pred_coefficient 0.35491
+wandb:          sample_8/coef_error 0.04269
+wandb:            sample_8/filename param0/1736b8494abf3...
+wandb:      sample_8/gt_coefficient 0.26051
+wandb:      sample_8/inference_time 0.05654
+wandb:   sample_8/l2_error_pressure 0.07317
+wandb:   sample_8/l2_error_velocity 0.0323
+wandb:        sample_8/mse_pressure 0.05385
+wandb:    sample_8/pred_coefficient 0.24939
+wandb:         sample_80/coef_error 0.05014
+wandb:           sample_80/filename param0/18a9275b78be4...
+wandb:     sample_80/gt_coefficient 0.23002
+wandb:     sample_80/inference_time 0.0574
+wandb:  sample_80/l2_error_pressure 0.10418
+wandb:  sample_80/l2_error_velocity 0.04056
+wandb:       sample_80/mse_pressure 0.08431
+wandb:   sample_80/pred_coefficient 0.24156
+wandb:         sample_81/coef_error 0.05953
+wandb:           sample_81/filename param0/119033fe08314...
+wandb:     sample_81/gt_coefficient 0.26032
+wandb:     sample_81/inference_time 0.05822
+wandb:  sample_81/l2_error_pressure 0.11037
+wandb:  sample_81/l2_error_velocity 0.04804
+wandb:       sample_81/mse_pressure 0.09043
+wandb:   sample_81/pred_coefficient 0.27582
+wandb:         sample_82/coef_error 0.04356
+wandb:           sample_82/filename param0/1c5a350ea0f55...
+wandb:     sample_82/gt_coefficient 0.24047
+wandb:     sample_82/inference_time 0.0544
+wandb:  sample_82/l2_error_pressure 0.07477
+wandb:  sample_82/l2_error_velocity 0.05672
+wandb:       sample_82/mse_pressure 0.04951
+wandb:   sample_82/pred_coefficient 0.22999
+wandb:         sample_83/coef_error 0.26243
+wandb:           sample_83/filename param0/1aef0af3cdafb...
+wandb:     sample_83/gt_coefficient 0.21747
+wandb:     sample_83/inference_time 0.05921
+wandb:  sample_83/l2_error_pressure 0.20387
+wandb:  sample_83/l2_error_velocity 0.12038
+wandb:       sample_83/mse_pressure 0.30625
+wandb:   sample_83/pred_coefficient 0.27455
+wandb:         sample_84/coef_error 0.07122
+wandb:           sample_84/filename param0/1a0bc9ab92c91...
+wandb:     sample_84/gt_coefficient 0.28783
+wandb:     sample_84/inference_time 0.05859
+wandb:  sample_84/l2_error_pressure 0.08679
+wandb:  sample_84/l2_error_velocity 0.05331
+wandb:       sample_84/mse_pressure 0.06429
+wandb:   sample_84/pred_coefficient 0.30833
+wandb:         sample_85/coef_error 0.00923
+wandb:           sample_85/filename param0/1d4b2404a00ef...
+wandb:     sample_85/gt_coefficient 0.29979
+wandb:     sample_85/inference_time 0.05674
+wandb:  sample_85/l2_error_pressure 0.08075
+wandb:  sample_85/l2_error_velocity 0.04248
+wandb:       sample_85/mse_pressure 0.0591
+wandb:   sample_85/pred_coefficient 0.29702
+wandb:         sample_86/coef_error 0.12561
+wandb:           sample_86/filename param0/1137cd58d6a45...
+wandb:     sample_86/gt_coefficient 0.25413
+wandb:     sample_86/inference_time 0.05831
+wandb:  sample_86/l2_error_pressure 0.12123
+wandb:  sample_86/l2_error_velocity 0.07983
+wandb:       sample_86/mse_pressure 0.11919
+wandb:   sample_86/pred_coefficient 0.28605
+wandb:         sample_87/coef_error 0.04039
+wandb:           sample_87/filename param0/163786646ae25...
+wandb:     sample_87/gt_coefficient 0.24063
+wandb:     sample_87/inference_time 0.05731
+wandb:  sample_87/l2_error_pressure 0.09239
+wandb:  sample_87/l2_error_velocity 0.03835
+wandb:       sample_87/mse_pressure 0.06464
+wandb:   sample_87/pred_coefficient 0.25035
+wandb:         sample_88/coef_error 0.10282
+wandb:           sample_88/filename param0/10e15fd62309a...
+wandb:     sample_88/gt_coefficient 0.27579
+wandb:     sample_88/inference_time 0.05831
+wandb:  sample_88/l2_error_pressure 0.09637
+wandb:  sample_88/l2_error_velocity 0.04586
+wandb:       sample_88/mse_pressure 0.07909
+wandb:   sample_88/pred_coefficient 0.30415
+wandb:         sample_89/coef_error 0.22172
+wandb:           sample_89/filename param0/1dbb02c20bb93...
+wandb:     sample_89/gt_coefficient 0.24438
+wandb:     sample_89/inference_time 0.05956
+wandb:  sample_89/l2_error_pressure 0.20013
+wandb:  sample_89/l2_error_velocity 0.1107
+wandb:       sample_89/mse_pressure 0.3346
+wandb:   sample_89/pred_coefficient 0.29857
+wandb:          sample_9/coef_error 0.14305
+wandb:            sample_9/filename param0/1b94aad142e6c...
+wandb:      sample_9/gt_coefficient 0.29433
+wandb:      sample_9/inference_time 0.05889
+wandb:   sample_9/l2_error_pressure 0.14994
+wandb:   sample_9/l2_error_velocity 0.0796
+wandb:        sample_9/mse_pressure 0.20815
+wandb:    sample_9/pred_coefficient 0.33643
+wandb:         sample_90/coef_error 0.2122
+wandb:           sample_90/filename param0/1ba30d64da90e...
+wandb:     sample_90/gt_coefficient 0.23299
+wandb:     sample_90/inference_time 0.05953
+wandb:  sample_90/l2_error_pressure 0.20448
+wandb:  sample_90/l2_error_velocity 0.1197
+wandb:       sample_90/mse_pressure 0.33502
+wandb:   sample_90/pred_coefficient 0.28243
+wandb:         sample_91/coef_error 0.03688
+wandb:           sample_91/filename param0/1d0a46cfc2799...
+wandb:     sample_91/gt_coefficient 0.28707
+wandb:     sample_91/inference_time 0.05561
+wandb:  sample_91/l2_error_pressure 0.0788
+wandb:  sample_91/l2_error_velocity 0.03901
+wandb:       sample_91/mse_pressure 0.05383
+wandb:   sample_91/pred_coefficient 0.27648
+wandb:         sample_92/coef_error 0.18691
+wandb:           sample_92/filename param0/19d49c8015948...
+wandb:     sample_92/gt_coefficient 0.25798
+wandb:     sample_92/inference_time 0.05581
+wandb:  sample_92/l2_error_pressure 0.12243
+wandb:  sample_92/l2_error_velocity 0.10629
+wandb:       sample_92/mse_pressure 0.14377
+wandb:   sample_92/pred_coefficient 0.20976
+wandb:         sample_93/coef_error 0.054
+wandb:           sample_93/filename param0/1b5b5a43e0281...
+wandb:     sample_93/gt_coefficient 0.22962
+wandb:     sample_93/inference_time 0.05522
+wandb:  sample_93/l2_error_pressure 0.10904
+wandb:  sample_93/l2_error_velocity 0.0515
+wandb:       sample_93/mse_pressure 0.13449
+wandb:   sample_93/pred_coefficient 0.24202
+wandb:         sample_94/coef_error 0.02902
+wandb:           sample_94/filename param0/1336353d15efd...
+wandb:     sample_94/gt_coefficient 0.23317
+wandb:     sample_94/inference_time 0.05362
+wandb:  sample_94/l2_error_pressure 0.10587
+wandb:  sample_94/l2_error_velocity 0.06875
+wandb:       sample_94/mse_pressure 0.10312
+wandb:   sample_94/pred_coefficient 0.23994
+wandb:         sample_95/coef_error 0.20466
+wandb:           sample_95/filename param0/1284876ac0e23...
+wandb:     sample_95/gt_coefficient 0.25743
+wandb:     sample_95/inference_time 0.05781
+wandb:  sample_95/l2_error_pressure 0.18163
+wandb:  sample_95/l2_error_velocity 0.10853
+wandb:       sample_95/mse_pressure 0.28558
+wandb:   sample_95/pred_coefficient 0.31011
+wandb:         sample_96/coef_error 0.05742
+wandb:           sample_96/filename param0/1687b77b048d1...
+wandb:     sample_96/gt_coefficient 0.27357
+wandb:     sample_96/inference_time 0.05908
+wandb:  sample_96/l2_error_pressure 0.09694
+wandb:  sample_96/l2_error_velocity 0.04436
+wandb:       sample_96/mse_pressure 0.07785
+wandb:   sample_96/pred_coefficient 0.28928
+wandb:         sample_97/coef_error 0.1234
+wandb:           sample_97/filename param0/1be81460e620a...
+wandb:     sample_97/gt_coefficient 0.38603
+wandb:     sample_97/inference_time 0.06293
+wandb:  sample_97/l2_error_pressure 0.28973
+wandb:  sample_97/l2_error_velocity 0.21839
+wandb:       sample_97/mse_pressure 0.72079
+wandb:   sample_97/pred_coefficient 0.43367
+wandb:         sample_98/coef_error 0.03341
+wandb:           sample_98/filename param0/1ae530f49a914...
+wandb:     sample_98/gt_coefficient 0.259
+wandb:     sample_98/inference_time 0.05618
+wandb:  sample_98/l2_error_pressure 0.07352
+wandb:  sample_98/l2_error_velocity 0.04278
+wandb:       sample_98/mse_pressure 0.04846
+wandb:   sample_98/pred_coefficient 0.26766
+wandb:         sample_99/coef_error 0.0096
+wandb:           sample_99/filename param0/12b5e4f52c22b...
+wandb:     sample_99/gt_coefficient 0.28669
+wandb:     sample_99/inference_time 0.05478
+wandb:  sample_99/l2_error_pressure 0.09725
+wandb:  sample_99/l2_error_velocity 0.03885
+wandb:       sample_99/mse_pressure 0.0721
+wandb:   sample_99/pred_coefficient 0.28944
+wandb:    summary/l2_error_pressure 0.13345
+wandb:    summary/l2_error_velocity 0.07659
+wandb:      summary/mean_coef_error 0.1006
+wandb:  summary/mean_inference_time 0.06148
+wandb:        summary/rmse_pressure 8.41854
+wandb:   summary/rmse_velocity_mean 0.91857
+wandb: summary/spearman_correlation 0.76814
+wandb:        summary/total_samples 100
+wandb: 
+wandb: 🚀 View run eval_ErwinFlashTransformer_fold0_ep200 at: https://wandb.ai/pedro-mpcurvo-university-of-amsterdam/car-design-shapenet-eval/runs/ywrtlf69
+wandb: ⭐️ View project at: https://wandb.ai/pedro-mpcurvo-university-of-amsterdam/car-design-shapenet-eval
+wandb: Synced 5 W&B file(s), 1 media file(s), 2 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20250514_103955-ywrtlf69/logs
+param0/1768f55a3c29cd483337cb9d908ce86e
+0.15997705142319257
+param0/10716a366de708b8fac96522b26f7fd
+0.1781431917740528
+param0/10e99b1475098c0aaa69dfdc5532bb13
+0.1454107762812894
+param0/156d4748560997c9a848f24544821b25
+0.12472276090589429
+param0/1641efa5c92514d86c4f4dbcda5f2fc0
+0.1376354177642191
+param0/11d1fdaedf3ab83b8fb28f8a689c8ba3
+0.13161320995047435
+param0/12a034b6be9afb50ae983613a2e0a741
+0.14987351545270203
+param0/19245fb8ee79038fcd059a326bfe20ef
+0.13834248465619342
+param0/1736b8494abf38ba4eb766e5a46fceab
+0.12771418273722818
+param0/1b94aad142e6c2b8af9f38a1ee687286
+0.12924776878590194
+param0/180d1e3463c29355bda72093f9b5aa73
+0.13679254662802592
+param0/1ab80bc91a45b7d0a31091d2234b9f68
+0.13411187840480773
+param0/1acfbda4ce0ec524bedced414fad522f
+0.12942143298787206
+param0/165aec174bb93968a114c8c036e29a08
+0.12186663827829494
+param0/19042f5a90290859441c11ab4641b257
+0.11829994499503763
+param0/1724ae84377e0b9ba6c2c95b41a5446d
+0.1234056938220137
+param0/175a289947f549b0e088606e38104b2
+0.1244367998632799
+param0/1cf17a1e1841d10c9e6a3356df3f3d9a
+0.12042448429840451
+param0/12d7c4013415ea147f5b0cb87a91de52
+0.11529104249646101
+param0/158a95b4da25aa1fa37f3fc191551700
+0.11413237507769178
+param0/1104f0924e03f2b6fc5886e868449015
+0.11053042097763534
+param0/1b85c850cb4b93a6e9415adaaf77fdbf
+0.11449994183673184
+param0/17600a4881b1ff6a5c14de0cb75f4d3e
+0.11664778848065581
+param0/198d8e274c59511b36a1a31af8f59
+0.11279710695106678
+param0/1328a95d69cefe32f200a72c9245aee7
+0.11706499920873382
+param0/109567d7d55b8fe515a520abec2f04dd
+0.11584222646834215
+param0/1c53bc6a3992b0843677ee89898ae463
+0.11788539017473978
+param0/12d463649ed6c176ab98a7077c964a60
+0.1138318729035055
+param0/12cd99c20b1a5a932e877e82c90c24d
+0.11312214102364102
+param0/1100f9eac1ca426a3dc399576707b67
+0.11250803107453544
+param0/1c4590ebc214e029816bd8f64e08b2bc
+0.11057620636055168
+param0/19cd3489f05d203f9ed410a010efa019
+0.11093394093628443
+param0/139df45393b6847838805e546aa28d99
+0.10850891559061818
+param0/18d2959d79af059e476502dcb0dc5465
+0.11128730585468395
+param0/1c66dbe15a6be89a7bfe055aeab68431
+0.11468325972120788
+param0/11dba0c2ec8127356c2fe9dcfa1ee2f8
+0.1168686153530875
+param0/193ec1089f0a98a36518e6cd1fbc5fab
+0.1138334053500476
+param0/10555502fa7b3027283ffcfc40c29975
+0.11336375801668269
+param0/1a56d596c77ad5936fa87a658faf1d26
+0.1131494698318695
+param0/1cff510c0630c3cc673ddeabdcc8c6e
+0.11076571463120075
+param0/1176dff7f0ec879719d740e0f6a9a113
+0.11043613920757384
+param0/11a96098620b2ebac2f9fb5458a091d1
+0.10847576331987187
+param0/1159faf9bf78998493680c5a9a367b4a
+0.10607462508951233
+param0/100715345ee54d7ae38b52b4ee9d36a3
+0.10680133864112623
+param0/18e16129375e723e6f8f8c736fcc7940
+0.10673191949921246
+param0/192fdf42f5a2623d673ddeabdcc8c6e
+0.10515048411526903
+param0/18927999d0c5a9687ba2618ede0d52ff
+0.10450182725985868
+param0/137f67657cdc9da5f985cd98f7d73e9a
+0.10462744049697996
+param0/147889b73fa491d82e877e82c90c24d
+0.10409355303671135
+param0/139718b631cbca546a36136419d55d5c
+0.10550871923963019
+param0/1782558e47730989b96212c8f6cd06e
+0.10404519505262202
+param0/1bb6b1ff46096f592dfac2620a0cf07b
+0.10438603748513761
+param0/19d0843797b8b2216abce8cb03e7794
+0.1042815265902897
+param0/1abeca7159db7ed9f200a72c9245aee7
+0.10459054527250151
+param0/15c785a7505992c3a9be8fd09fb14f4f
+0.10501132299534027
+param0/12cf05b9f5f2d2c195c8d3a7db4dbe65
+0.10663664145190961
+param0/15c3b923c85d22796d8b9531f93cc8de
+0.1050477828579064
+param0/1c490bf1c6b32ef6ff213501a803f212
+0.1037186494700118
+param0/198dfa16ba9f5f6617e76f36a4eac3ec
+0.10595158176250667
+param0/19f52dd4592c3fb5531e940de4b7770d
+0.10476835112608592
+param0/1d4066f8ae88a1ebec8ca19d7516cb42
+0.10515137213378717
+param0/1cd50bde9a3e711637b0898eccd7168
+0.10421890929314576
+param0/18ff13d7f181e7625fa21635eac9e4ed
+0.10373099659198864
+param0/1c6591c3fc686bf24132f89b3e69f40f
+0.10422262210786454
+param0/18aad9d102afbca57ba2273581c30cb
+0.10382250202217205
+param0/1089cbe82dc0e72133d7c9e122eec9b6
+0.10447106357268003
+param0/1523402e11400b75becf71e2e014ff6f
+0.10345948273871008
+param0/14ace3e8d05f8d21a413908c0e169330
+0.10418902595271931
+param0/173669aeeba92aaec4929b8bd41b8bc6
+0.10291485361171329
+param0/171c20ce4de5ee8730f65ce13e7c1910
+0.10394702721549705
+param0/1cde62b063e14777c9152a706245d48
+0.10266902427665356
+param0/107699ca67fcdf3fea999fe4ffdc2504
+0.10230772142132402
+param0/1c1bd2dcbb13aa5a6b652ed61c4ad126
+0.10140182714138266
+param0/1213742aa7815fd0e23d60a1b706b44f
+0.10326833899902428
+param0/13d090612aec3d80ca92a4cdad802b45
+0.10332605724471446
+param0/10247b51a42b41603ffe0e5069bf1eb5
+0.10325443572447583
+param0/16bd0438de54fc91b1bb46d2556ba67d
+0.10215414391494784
+param0/150f2cf6e9c54d08c24a350006d347c
+0.10111233490035183
+param0/15cc37ac9b3b756acfd826dd468a5497
+0.10137681005370215
+param0/1399eab8ad7262eb7f3efc94c2d31dc5
+0.10157372404933832
+param0/18a9275b78be4b9ec6d3267fc5334296
+0.10093871267083153
+param0/119033fe083145e22f31600ac759c763
+0.10043378570981543
+param0/1c5a350ea0f55f793fbce9ec40e1f047
+0.0997485541161628
+param0/1aef0af3cdafb118c6a40bdf315062da
+0.10168520001507922
+param0/1a0bc9ab92c915167ae33d942430658c
+0.10132678807684604
+param0/1d4b2404a00ef4bb627014ff98c41eb1
+0.1002559277609979
+param0/1137cd58d6a45c6659a47b1880958de9
+0.10054738635616757
+param0/163786646ae2578749a5fc144a874235
+0.09986374161563702
+param0/10e15fd62309a13d1812324a4c0d910
+0.09989700157088982
+param0/1dbb02c20bb93af81c1b3b2ed8d13bf8
+0.10125061384340413
+param0/1ba30d64da90ea05283ffcfc40c29975
+0.10246978451603742
+param0/1d0a46cfc2799eefdeea60824a43a0b
+0.10175685962884243
+param0/19d49c8015948b742d60c8689a64d7a0
+0.10267253351469913
+param0/1b5b5a43e0281030b96212c8f6cd06e
+0.10215475611175136
+param0/1336353d15efdf010f6f717db02df67
+0.10138490212239623
+param0/1284876ac0e2371aa4dbb766064f8bbf
+0.10246063343097848
+param0/1687b77b048d1aaf635b88185c42637a
+0.10199628628924572
+param0/1be81460e620aea65cde8c99e4b182f9
+0.10221470602887354
+param0/1ae530f49a914595b491214a0cc2380
+0.10151968488140589
+param0/12b5e4f52c22b348d8499d8846cb4c3b
+0.10060044599795791
+rho_d:  0.7681368136813681
+c_d:  0.10060044599795791
+relative l2 error press: 0.1334505
+relative l2 error velo: 0.07659079517018245
+press: 8.418538749432106
+velo: [0.2566764  0.35967165 1.528428  ] 0.9185747
+time: 0.06148301362991333
+
+JOB STATISTICS
+==============
+Job ID: 11821891
+Cluster: snellius
+User/Group: scur1428/scur1428
+State: COMPLETED (exit code 0)
+Nodes: 1
+Cores per node: 18
+CPU Utilized: 00:03:30
+CPU Efficiency: 6.67% of 00:52:30 core-walltime
+Job Wall-clock time: 00:02:55
+Memory Utilized: 12.25 GB
+Memory Efficiency: 10.21% of 120.00 GB (120.00 GB/node)
