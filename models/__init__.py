@@ -12,9 +12,9 @@ Each model leverages a physics-informed transformer architecture with
 specialized attention mechanisms tailored to the specific mesh type.
 """
 
-from .Transolver_Irregular_Mesh import Model as HAETransolver_Irregular_Mesh
-from .Transolver_Structured_Mesh_2D import Model as HAETransolver_Structured_Mesh_2D
-from .Transolver_Structured_Mesh_3D import Model as HAETransolver_Structured_Mesh_3D
+from .HAETransolver_Irregular_Mesh import Model as HAETransolver_Irregular_Mesh
+from .HAETransolver_Structured_Mesh_2D import Model as HAETransolver_Structured_Mesh_2D
+from .HAETransolver_Structured_Mesh_3D import Model as HAETransolver_Structured_Mesh_3D
 
 __all__ = [
     "HAETransolver_Irregular_Mesh",
