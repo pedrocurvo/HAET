@@ -28,7 +28,9 @@ class ErwinTransformer(nn.Module):
         decode (bool): whether to decode or not. If not, returns latent representation at the coarsest level.
         mlp_ratio (int): ratio of SWIGLU's hidden dim to a layer's hidden dim.
         dimensionality (int): dimensionality of the input data.
-        mp_steps (int): number of message passing steps in the MPNN Embedding.
+        mp_steps (int): number of message passing steps in the MPNN Embedding. If 0, MPNN will be skipped.
+        embed (bool): whether to use the ErwinEmbedding module. If False, will use a simple linear projection
+            or identity if dimensions match. Default is True.
 
     Notes:
         - lengths of ball_size, enc_num_heads, enc_depths must be the same N (as it includes encoder and bottleneck).
@@ -50,6 +52,7 @@ class ErwinTransformer(nn.Module):
         mlp_ratio: int = 4,
         dimensionality: int = 3,
         mp_steps: int = 3,
+        embed: bool = True,
     ):
         super().__init__()
         assert len(enc_num_heads) == len(enc_depths) == len(ball_sizes)
@@ -60,8 +63,12 @@ class ErwinTransformer(nn.Module):
         self.decode = decode
         self.ball_sizes = ball_sizes
         self.strides = strides
+        self.mp_steps = mp_steps
+        self.use_embedding = embed
 
-        self.embed = ErwinEmbedding(c_in, c_hidden[0], mp_steps, dimensionality)
+        # Initialize embedding based on the embed flag
+        if self.use_embedding:
+            self.embed = ErwinEmbedding(c_in, c_hidden[0], mp_steps, dimensionality)
 
         num_layers = len(enc_depths) - 1  # last one is a bottleneck
 
@@ -149,7 +156,8 @@ class ErwinTransformer(nn.Module):
                     self.ball_sizes,
                     self.rotate,
                 )
-            if edge_index is None and self.embed.mp_steps:
+            # Only build radius graph if embedding is enabled and message passing is needed
+            if edge_index is None and self.use_embedding and self.mp_steps > 0:
                 assert (
                     radius is not None
                 ), "radius (float) must be provided if edge_index is not given to build radius graph"
@@ -157,7 +165,13 @@ class ErwinTransformer(nn.Module):
                     node_positions, radius, batch=batch_idx, loop=True
                 )
 
-        x = self.embed(node_features, node_positions, edge_index)
+        # Process features according to embedding configuration
+        if self.use_embedding:
+            # Use ErwinEmbedding which includes both linear projection and optional MPNN
+            x = self.embed(node_features, node_positions, edge_index)
+        else:
+            # Use either Identity or simple linear projection without MPNN
+            x = node_features
 
         node = Node(
             x=x[tree_idx],
