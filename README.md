@@ -14,45 +14,59 @@
 
 ## Introduction
 
-HAET (Hierarchical Attention Erwin Transolver) combines the strengths of two advanced architectures for processing complex mesh data: Transolver++'s token slicing approach with adaptive temperature and eidetic states ([Transolver](https://github.com/thuml/Transolver)) and Erwin's hierarchical ball attention mechanism ([Erwin](https://github.com/maxxxzdn/erwin)).
+HAET (Hierarchical Attention Erwin Transolver) is a hybrid architecture designed to process mesh-based physical systems at industrial scale by merging the strengths of two state-of-the-art methods: [Transolver](https://github.com/thuml/Transolver) and [Erwin](https://github.com/maxxxzdn/erwin).
+
+Transolver++ introduces a slice-based attention mechanism that significantly reduces the number of tokens required for mesh processing, enabling the handling of millions of points. However, attention within slices still scales quadratically with the number of slices, which limits scalability beyond 32 or 64 slices. Erwin, on the other hand, uses a tree-based hierarchical attention mechanism with ball grouping, reducing attention complexity from O(N²) to O(N), but it struggles with large-scale problems and can lose geometric context in the ball hierarchy.
+
+HAET resolves both limitations by using Transolver++ to generate physical-aware slices, then computing their center-of-mass embeddings (eidetic states) and processing them through Erwin’s hierarchical ball attention. This design enables HAET to efficiently capture global and multi-scale interactions while remaining scalable to extremely large point clouds.
 
 ## Architecture Overview
 
-### Problem Addressed
+### Key Challenges
 
-Traditional approaches face three main challenges:
-- **Attention Complexity**: Standard attention mechanisms scale quadratically with the number of tokens, limiting computational efficiency for large meshes.
-- **Memory Usage**: Traditional transformer architectures require substantial memory for processing complex mesh structures.
-- **Multi-scale Features**: Capturing both local and global relationships in physics simulations requires efficient multi-scale feature extraction.
+- ⚠️ Quadratic Attention Bottleneck: Standard and slice-level attention require O(N²) operations, limiting scalability.
 
-### Our Solution
+- 🧱 Loss of Geometry in Coarse Attention: Ball-based methods may abstract away geometric structure.
 
-HAET addresses these limitations by:
-1. Implementing Transolver++ with adaptive temperature and eidetic states for improved memory efficiency
-2. Using Rep-Slice with learnable temperature scaling for more accurate mesh tokenization
-3. Processing tokens through Erwin's hierarchical ball attention instead of traditional self-attention
+- 💾 Memory Pressure on Full Attention Models: Full-resolution attention is impractical for large meshes.
 
-### Key Components
+## Our Solution
 
-- **Rep-Slice Tokenization**: Converts mesh structures (2D/3D/irregular) into a reduced set of eidetic states using Rep-Slice with adaptive temperature
-- **Eidetic States**: Memory-efficient token representations that capture essential physical properties
-- **Ball Hierarchical Attention**: Processes tokens using Erwin's ball-based attention for linear complexity
-- **Multi-scale Processing**: Handles relationships at different scales through Erwin's encoder-decoder structure
+HAET introduces a modular hybrid pipeline:
 
-## Benefits
+- 🧩 Rep-Slice Tokenization (from Transolver++): Soft clustering of points into slices based on physical semantics, guided by an adaptive temperature mechanism.
 
-- **Memory Efficiency**: Reduces memory requirements by 50% through Transolver++'s eidetic states approach
-- **Computational Efficiency**: Replaces quadratic attention complexity with linear-complexity ball attention
-- **Adaptive Temperature**: Rep-Slice with adaptive temperature (Ada-Temp) for improved tokenization
-- **Hierarchical Features**: Captures multi-scale relationships in mesh data
-- **Cross-domain Applicability**: Works with various mesh types (structured 2D/3D and irregular)
+- 🧠 Eidetic States: Each slice becomes a memory-efficient representation that summarizes physical and spatial properties.
+
+- 🪄 Hierarchical Ball Attention (from Erwin): Eidetic tokens are passed into Erwin, which computes efficient attention using a hierarchical ball-tree, scaling linearly with token count.
+
+- 📍 Center-of-Mass Positional Encoding: Slice positions are derived from physical centroids, preserving geometry during pooling.
+
+This pipeline allows HAET to scale beyond previous limitations while maintaining strong inductive biases from physics and geometry.
+
+## Key Features
+
+- 🔁 Linear Attention Complexity: Erwin replaces quadratic attention with a hierarchical mechanism over slices.
+
+- 📈 Scalable Mesh Processing: Easily handles millions of points with low memory footprint.
+
+- 🧬 Physical & Geometric Awareness: Combines Transolver++'s physical slices with Erwin's geometric hierarchy.
+
+- 🌐 Multi-Scale Representation: Captures both local and global interactions through coarse-to-fine Erwin layers.
+
+- 🔧 Adaptable Tokenization: Uses Ada-Temp to flexibly assign points to slice tokens based on learned importance.
 
 ## Applications
 
-Designed for computationally demanding physics and engineering simulations, including:
-- Computational fluid dynamics
-- Structural analysis
-- Physical system modeling
+HAET is ideal for large-scale physics and engineering simulations, including:
+
+- 💨 Computational fluid dynamics (CFD)
+
+- 🧮 Mesh-based PDE solving
+
+- 🏗️ Structural and thermal analysis
+
+- ⚙️ General physical system modeling with spatial structure
 
 ## Acknowledgements
 
@@ -62,7 +76,7 @@ We appreciate the following GitHub repositories for their valuable code base and
 - [Geo-FNO](https://github.com/neuraloperator/Geo-FNO)
 - [Latent-Spectral-Models](https://github.com/thuml/Latent-Spectral-Models)
 - [AirfRANS](https://github.com/Extrality/AirfRANS)
-- [Transolver](https://github.com/thuml/Transolver)
+- 📘 [Transolver](https://github.com/thuml/Transolver)
   ```
   @inproceedings{wu2024Transolver,
     title={Transolver: A Fast Transformer Solver for PDEs on General Geometries},
@@ -71,7 +85,7 @@ We appreciate the following GitHub repositories for their valuable code base and
     year={2024}
   }
   ```
-- [Transolver++ Paper](https://arxiv.org/abs/2404.xxxxx)
+- 📘 [Transolver++ Paper](https://arxiv.org/abs/2404.02414)
   ```
   @misc{luo2025transolver,
     title={Transolver++: An Accurate Neural Solver for PDEs on Million-Scale Geometries},
@@ -80,9 +94,9 @@ We appreciate the following GitHub repositories for their valuable code base and
     eprint={2502.02414},
     archivePrefix={arXiv},
     primaryClass={cs.LG}
-}
+  }
   ```
-- [Erwin](https://github.com/maxxxzdn/erwin)
+- 📘 [Erwin](https://github.com/maxxxzdn/erwin)
   ```
   @inproceedings{zhdanov2025erwin,
     title={Erwin: A Tree-based Hierarchical Transformer for Large-scale Physical Systems}, 
@@ -91,3 +105,4 @@ We appreciate the following GitHub repositories for their valuable code base and
     year={2025}
   }
   ```
+
