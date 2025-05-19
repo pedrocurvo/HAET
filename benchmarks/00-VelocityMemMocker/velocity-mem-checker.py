@@ -2,3 +2,106 @@
 This script checks the memory usage of the HAET model
 """
 
+import time
+import torch
+import sys
+import os
+
+# Add the project root to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+from models.HAETransolver_Irregular_Mesh import Model
+
+
+def benchmark_model(num_points, space_dim=1, fun_dim=1, n_hidden=256):
+    """
+    Benchmarks the HAETransolver model for a given number of points.
+
+    Args:
+        num_points (int): The number of points to test.
+        space_dim (int): The dimension of the spatial coordinates.
+        fun_dim (int): The dimension of the input function values.
+        n_hidden (int): The hidden dimension size of the model.
+    """
+    print(f"--- Benchmarking with {num_points} points ---")
+
+    # Create dummy input data
+    x = torch.rand(1, num_points, space_dim).cuda()  # Batch size of 1
+    fx = torch.rand(1, num_points, fun_dim).cuda()  # Batch size of 1
+
+    # Instantiate the model
+    model = Model(
+        space_dim=space_dim,
+        fun_dim=fun_dim,
+        n_hidden=n_hidden,
+        c_hidden=None,  # Defaulting ErwinTransformer specific params
+        ball_sizes=None,
+        enc_num_heads=None,
+        enc_depths=None,
+        dec_num_heads=None,
+        dec_depths=None,
+        strides=None,
+    ).cuda()
+    model.eval()  # Set model to evaluation mode
+
+    # Warm-up GPU
+    for _ in range(3):
+        _ = model(x, fx)
+        torch.cuda.synchronize()
+
+    # Measure forward pass time
+    torch.cuda.synchronize()  # Wait for all kernels to complete before starting timer
+    start_time = time.time()
+    output = model(x, fx)
+    torch.cuda.synchronize()  # Wait for model forward pass to complete
+    end_time = time.time()
+    time_taken = end_time - start_time
+    print(f"Forward pass time: {time_taken:.4f} seconds")
+
+    # Measure memory usage
+    torch.cuda.reset_peak_stats()  # Reset peak memory stats before the operation
+    initial_memory = torch.cuda.memory_allocated()
+
+    # Perform the operation for which memory is to be measured
+    output = model(x, fx)  # Re-run forward pass
+    torch.cuda.synchronize()
+    final_memory = torch.cuda.memory_allocated()
+    peak_memory = torch.cuda.max_memory_allocated()  # Peak memory since last reset
+
+    print(f"Initial GPU memory allocated: {initial_memory / 1024**2:.2f} MB")
+    print(f"Final GPU memory allocated (after fwd pass): {final_memory / 1024**2:.2f} MB")
+    print(f"Peak GPU memory allocated during fwd pass: {peak_memory / 1024**2:.2f} MB")
+
+    return time_taken, peak_memory
+
+
+if __name__ == "__main__":
+    point_counts = [1000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000]
+    space_dim_test = 1
+    fun_dim_test = 1
+    n_hidden_test = 256
+
+    print("Starting HAETransolver Benchmark...")
+    for points in point_counts:
+        try:
+            time_taken, memory_used = benchmark_model(
+                num_points=points,
+                space_dim=space_dim_test,
+                fun_dim=fun_dim_test,
+                n_hidden=n_hidden_test
+            )
+            print(f"Successfully benchmarked {points} points. Time: {time_taken:.4f}s, Peak Memory: {memory_used / 1024**2:.2f} MB")
+            print("-" * 30)
+        except RuntimeError as e:
+            if "out of memory" in str(e).lower():
+                print(f"Ran out of memory with {points} points.")
+                print(f"Error: {e}")
+                break
+            else:
+                print(f"A runtime error occurred with {points} points: {e}")
+                break
+        except Exception as e:
+            print(f"An unexpected error occurred with {points} points: {e}")
+            break
+    print("Benchmark finished.")
+
