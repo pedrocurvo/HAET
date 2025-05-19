@@ -1,3 +1,7 @@
+"""
+Evaluation script for ErwinTransolver model on the ShapeNetCar dataset.
+This script handles model evaluation, metrics calculation, and result reporting.
+"""
 import os
 import torch
 import argparse
@@ -15,55 +19,194 @@ from models.Transolver import Model
 from tqdm import tqdm
 from torch.cuda.amp import autocast
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--data_dir', default='/data/PDE_data/mlcfd_data/training_data')
-parser.add_argument('--save_dir', default='/data/PDE_data/mlcfd_data/preprocessed_data')
-parser.add_argument('--fold_id', default=0, type=int)
-parser.add_argument('--gpu', default=0, type=int)
-parser.add_argument('--cfd_model')
-parser.add_argument('--cfd_mesh', action='store_true')
-parser.add_argument('--r', default=0.2, type=float)
-parser.add_argument('--weight', default=0.5, type=float)
-parser.add_argument('--nb_epochs', default=200, type=float)
-parser.add_argument('--wandb_project', default='car-design-shapenet-eval', type=str)
-parser.add_argument('--wandb_entity', default=None, type=str)
-parser.add_argument('--disable_wandb', action='store_true')
-args = parser.parse_args()
+
+def parse_arguments():
+    """
+    Parse command-line arguments for the evaluation process.
+    
+    Returns:
+        argparse.Namespace: Parsed command-line arguments
+    """
+    parser = argparse.ArgumentParser(description="Evaluate the ErwinTransolver model on ShapeNetCar dataset")
+    
+    # Data and paths
+    parser.add_argument('--data_dir', default='/data/shapenet_car/mlcfd_data/training_data',
+                        help='Directory containing the training data')
+    parser.add_argument('--save_dir', default='/data/shapenet_car/mlcfd_data/preprocessed_data',
+                        help='Directory to save preprocessed data')
+    
+    # Model configuration
+    parser.add_argument('--cfd_model', type=str, required=True,
+                        help='Model type to use (e.g., ErwinTransolverNoEmbedding)')
+    parser.add_argument('--cfd_mesh', action='store_true',
+                        help='Use CFD mesh if specified')
+    parser.add_argument('--r', default=0.2, type=float,
+                        help='Radius parameter for the model')
+    
+    # Model architecture parameters
+    parser.add_argument('--n_hidden', default=256, type=int,
+                        help='Number of hidden units in the model')
+    parser.add_argument('--n_layers', default=2, type=int,
+                        help='Number of layers in the model')
+    parser.add_argument('--space_dim', default=3, type=int,
+                        help='Dimensionality of the space')
+    parser.add_argument('--fun_dim', default=4, type=int,
+                        help='Dimensionality of the function space')
+    parser.add_argument('--n_head', default=8, type=int,
+                        help='Number of attention heads')
+    parser.add_argument('--mlp_ratio', default=2, type=int,
+                        help='MLP ratio for transformer')
+    parser.add_argument('--out_dim', default=4, type=int,
+                        help='Output dimension')
+    parser.add_argument('--slice_num', default=128, type=int,
+                        help='Number of slices for the model')
+    parser.add_argument('--unified_pos', default=0, type=int,
+                        help='Whether to use unified position encoding')
+    
+    # Evaluation parameters
+    parser.add_argument('--weight', default=0.5, type=float,
+                        help='Weight for regularization')
+    parser.add_argument('--nb_epochs', default=200, type=int,
+                        help='Number of training epochs')
+    
+    # Hardware and run configuration
+    parser.add_argument('--gpu', default=0, type=int,
+                        help='GPU ID to use (-1 for CPU)')
+    parser.add_argument('--fold_id', default=0, type=int,
+                        help='Fold ID for cross-validation')
+    parser.add_argument('--experiment_name', default=None, type=str,
+                        help='Name of the experiment for organizing results')
+                        
+    # WandB configuration
+    parser.add_argument('--wandb_project', default='car-design-shapenet-eval', type=str,
+                        help='WandB project name')
+    parser.add_argument('--wandb_entity', default=None, type=str,
+                        help='WandB entity name')
+    parser.add_argument('--disable_wandb', action='store_true',
+                        help='Disable WandB logging')
+    
+    return parser.parse_args()
+
+
+# Get command line arguments
+args = parse_arguments()
 print(args)
 
+def init_wandb(args):
+    """
+    Initialize Weights & Biases logging if not disabled.
+    
+    Args:
+        args: Command-line arguments
+    """
+    if not args.disable_wandb:
+        # Create a descriptive run name
+        run_name = f"eval_{args.cfd_model}_fold{args.fold_id}_ep{args.nb_epochs}"
+        if args.experiment_name:
+            run_name = f"{args.experiment_name}_{run_name}"
+        
+        # Initialize wandb with all relevant config parameters
+        wandb.init(
+            project=args.wandb_project,
+            entity=args.wandb_entity,
+            config={
+                "cfd_model": args.cfd_model,
+                "fold_id": args.fold_id,
+                "r": args.r,
+                "weight": args.weight,
+                "nb_epochs": args.nb_epochs,
+                "cfd_mesh": args.cfd_mesh,
+                "n_hidden": args.n_hidden,
+                "n_layers": args.n_layers,
+                "space_dim": args.space_dim,
+                "fun_dim": args.fun_dim,
+                "n_head": args.n_head,
+                "mlp_ratio": args.mlp_ratio,
+                "out_dim": args.out_dim,
+                "slice_num": args.slice_num,
+                "unified_pos": args.unified_pos,
+                "experiment_name": args.experiment_name
+            },
+            name=run_name
+        )
+
+
 # Initialize wandb if not disabled
-if not args.disable_wandb:
-    wandb.init(
-        project=args.wandb_project,
-        entity=args.wandb_entity,
-        config={
-            "cfd_model": args.cfd_model,
-            "fold_id": args.fold_id,
-            "r": args.r,
-            "weight": args.weight,
-            "nb_epochs": args.nb_epochs,
-            "cfd_mesh": args.cfd_mesh
-        },
-        name=f"eval_{args.cfd_model}_fold{args.fold_id}_ep{args.nb_epochs}"
-    )
+init_wandb(args)
 
-n_gpu = torch.cuda.device_count()
-use_cuda = 0 <= args.gpu < n_gpu and torch.cuda.is_available()
-device = torch.device(f'cuda:{args.gpu}' if use_cuda else 'cpu')
+def setup_device(args):
+    """
+    Set up and return the appropriate device (CPU/GPU) for evaluation.
+    
+    Args:
+        args: Command-line arguments
+        
+    Returns:
+        torch.device: The device to use for evaluation
+    """
+    n_gpu = torch.cuda.device_count()
+    use_cuda = 0 <= args.gpu < n_gpu and torch.cuda.is_available()
+    device = torch.device(f'cuda:{args.gpu}' if use_cuda else 'cpu')
+    return device
 
-train_data, val_data, coef_norm, vallst = load_train_val_fold_file(args, preprocessed=True)
-val_ds = GraphDataset(val_data, use_cfd_mesh=args.cfd_mesh, r=args.r)
 
-path = f'metrics/{args.cfd_model}/{args.fold_id}/{args.nb_epochs}_{args.weight}'
+def load_dataset(args):
+    """
+    Load and prepare the validation dataset.
+    
+    Args:
+        args: Command-line arguments
+        
+    Returns:
+        tuple: Validation dataset, normalization coefficient, and validation file list
+    """
+    train_data, val_data, coef_norm, vallst = load_train_val_fold_file(args, preprocessed=True)
+    val_ds = GraphDataset(val_data, use_cfd_mesh=args.cfd_mesh, r=args.r)
+    return val_ds, coef_norm, vallst
 
-# 1. Reconstruct the model with training-time hyperparameters
-model = Model(n_hidden=256, n_layers=2, space_dim=3,
-                  fun_dim=4,
-                  n_head=8,
-                  mlp_ratio=2, out_dim=4,
-                  slice_num=128,
-                  radius=args.r,
-                  unified_pos=0).cuda()
+
+def create_model(args):
+    """
+    Create and initialize the model based on command-line arguments.
+    
+    Args:
+        args: Command-line arguments
+        
+    Returns:
+        torch.nn.Module: Initialized model
+    """
+    model = Model(
+        n_hidden=args.n_hidden,
+        n_layers=args.n_layers,
+        space_dim=args.space_dim,
+        fun_dim=args.fun_dim,
+        n_head=args.n_head,
+        mlp_ratio=args.mlp_ratio,
+        out_dim=args.out_dim,
+        slice_num=args.slice_num,
+        radius=args.r,
+        unified_pos=args.unified_pos
+    ).cuda()
+    
+    return model
+
+
+# Set up device
+device = setup_device(args)
+
+# Load dataset
+val_ds, coef_norm, vallst = load_dataset(args)
+
+# Determine path based on experiment name
+if args.experiment_name:
+    path = f'metrics/{args.experiment_name}/{args.cfd_model}/{args.fold_id}/{args.nb_epochs}_{args.weight}'
+else:
+    path = f'metrics/{args.cfd_model}/{args.fold_id}/{args.nb_epochs}_{args.weight}'
+
+print(f"Loading model from: {path}")
+
+# Create the model with the specified parameters
+model = create_model(args)
 
 # Load checkpoint
 checkpoint_path = os.path.join(path, f'model_{args.nb_epochs}.pth')
@@ -84,8 +227,15 @@ model.load_state_dict(new_state_dict)
 
 test_loader = DataLoader(val_ds, batch_size=1)
 
-if not os.path.exists('./results/' + args.cfd_model + '/'):
-    os.makedirs('./results/' + args.cfd_model + '/')
+# Create results directory based on experiment name
+if args.experiment_name:
+    results_dir = f'./results/{args.experiment_name}/{args.cfd_model}/'
+else:
+    results_dir = f'./results/{args.cfd_model}/'
+
+if not os.path.exists(results_dir):
+    os.makedirs(results_dir)
+    print(f"Created results directory: {results_dir}")
 
 with torch.no_grad():
     model.eval()
@@ -121,8 +271,8 @@ with torch.no_grad():
             out_denorm = out * std + mean
             y_denorm = targets * std + mean
 
-        np.save('./results/' + args.cfd_model + '/' + str(index) + '_pred.npy', out_denorm.detach().cpu().numpy())
-        np.save('./results/' + args.cfd_model + '/' + str(index) + '_gt.npy', y_denorm.detach().cpu().numpy())
+        np.save(os.path.join(results_dir, f"{index}_pred.npy"), out_denorm.detach().cpu().numpy())
+        np.save(os.path.join(results_dir, f"{index}_gt.npy"), y_denorm.detach().cpu().numpy())
 
         pred_coef = cal_coefficient(vallst[index].split('/')[1], pred_press[:, None].detach().cpu().numpy(),
                                     pred_velo.detach().cpu().numpy(), root=args.data_dir)
@@ -183,17 +333,38 @@ with torch.no_grad():
     print('velo:', rmse_velo_var, np.sqrt(np.mean(np.square(rmse_velo_var))))
     print('time:', mean_inference_time)
     
-    # Log summary metrics to wandb
-    if not args.disable_wandb:
+    # Create a function to log final results to wandb
+    def log_final_results_to_wandb():
+        """Log final evaluation results to Weights & Biases."""
+        if args.disable_wandb:
+            return
+            
         # Create correlation plot
         if len(gt_coef_list) > 0:
             correlation_data = [[g, p] for g, p in zip(gt_coef_list, pred_coef_list)]
             table = wandb.Table(data=correlation_data, columns=["Ground Truth", "Prediction"])
             wandb.log({
                 "coefficient_correlation": wandb.plot.scatter(
-                    table, "Ground Truth", "Prediction", title="Drag Coefficient Correlation"
+                    table, "Ground Truth", "Prediction", 
+                    title="Drag Coefficient Correlation"
                 )
             })
+        
+        # Create a results summary dictionary
+        result_dict = {
+            "model": args.cfd_model,
+            "experiment": args.experiment_name if args.experiment_name else "default",
+            "fold_id": args.fold_id,
+            "epochs": args.nb_epochs,
+            "spearman_correlation": spear,
+            "mean_coef_error": mean_coef_error,
+            "l2_error_pressure": l2err_press,
+            "l2_error_velocity": l2err_velo,
+            "rmse_pressure": rmse_press,
+            "rmse_velocity_mean": np.sqrt(np.mean(np.square(rmse_velo_var))),
+            "mean_inference_time": mean_inference_time,
+            "total_samples": index
+        }
         
         # Log summary metrics
         wandb.log({
@@ -207,5 +378,20 @@ with torch.no_grad():
             "summary/total_samples": index
         })
         
+        # Save result summary as artifact
+        import json
+        with open("evaluation_results.json", "w") as f:
+            json.dump(result_dict, f, indent=4)
+        
+        artifact = wandb.Artifact(
+            name=f"eval_results_{args.cfd_model}_{args.fold_id}", 
+            type="evaluation_results"
+        )
+        artifact.add_file("evaluation_results.json")
+        wandb.log_artifact(artifact)
+        
         # Finalize wandb run
         wandb.finish()
+    
+    # Log results to wandb
+    log_final_results_to_wandb()
