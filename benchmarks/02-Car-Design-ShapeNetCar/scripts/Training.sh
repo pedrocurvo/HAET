@@ -17,4 +17,10 @@ module load CUDA/12.4.0
 
 cd $HOME/HAET/benchmarks/02-Car-Design-ShapeNetCar
 
-srun python main.py --cfd_model=ErwinTransolverNoEmbedding --data_dir data/shapenet_car/mlcfd_data/training_data --save_dir data/shapenet_car/mlcfd_data/preprocessed_data
+srun python main.py \
+    --cfd_model=ErwinTransolverNoEmbedding \
+    --data_dir data/shapenet_car/mlcfd_data/training_data \
+    --save_dir data/shapenet_car/mlcfd_data/preprocessed_data \
+    --max_autotune \
+    --slice_num 128 \
+    --experiment_name=ErwinTransolver128
