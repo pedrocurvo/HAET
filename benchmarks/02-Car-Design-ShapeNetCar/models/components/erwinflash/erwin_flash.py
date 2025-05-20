@@ -6,10 +6,15 @@ import torch
 import torch.nn as nn
 import torch_cluster
 from balltree import build_balltree_with_rotations
+from torch._dynamo import disable # Add this import
 
 # Import components
 from .components import BasicLayer, ErwinEmbedding, Node
 
+# Add this custom operation wrapper
+@disable  # This decorator makes the function opaque to torch.dynamo
+def radius_graph_custom(pos, radius, batch=None, loop=False):
+    return torch_cluster.radius_graph(pos, radius, batch=batch, loop=loop)
 
 class ErwinTransformer(nn.Module):
     """
@@ -61,7 +66,7 @@ class ErwinTransformer(nn.Module):
         self.ball_sizes = ball_sizes
         self.strides = strides
 
-        # self.embed = ErwinEmbedding(c_in, c_hidden[0], mp_steps, dimensionality)
+        self.embed = ErwinEmbedding(c_in, c_hidden[0], mp_steps, dimensionality)
         # self.embed = nn.Identity()
 
         num_layers = len(enc_depths) - 1  # last one is a bottleneck
@@ -150,16 +155,17 @@ class ErwinTransformer(nn.Module):
                     self.ball_sizes,
                     self.rotate,
                 )
-            if edge_index is None and 0:
+            if edge_index is None and self.embed.mp_steps > 0:
                 assert (
                     radius is not None
                 ), "radius (float) must be provided if edge_index is not given to build radius graph"
-                edge_index = torch_cluster.radius_graph(
+                # Replace the direct torch_cluster call with our custom wrapper
+                edge_index = radius_graph_custom(
                     node_positions, radius, batch=batch_idx, loop=True
                 )
 
-        # x = self.embed(node_features, node_positions, edge_index)
-        x = node_features
+        x = self.embed(node_features, node_positions, edge_index)
+        # x = node_features
         node = Node(
             x=x[tree_idx],
             pos=node_positions[tree_idx],
