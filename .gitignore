@@ -348,4 +348,6 @@ cython_debug/
 
 # Personal 
 personal/
+# Checkpoint directories
+checkpoints/
 
