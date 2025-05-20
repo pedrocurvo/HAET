@@ -1,37 +1,30 @@
 import os
 import argparse
 import matplotlib.pyplot as plt
-import numpy as np
-import torch
 import wandb
-from tqdm import *
-from utils.testloss import TestLoss
-from model_dict import get_model
-from utils.normalizer import UnitTransformer
-from torch.cuda.amp import autocast, GradScaler
 
 parser = argparse.ArgumentParser('Training Transformer')
 
 parser.add_argument('--lr', type=float, default=1e-3)
 parser.add_argument('--epochs', type=int, default=500)
 parser.add_argument('--weight_decay', type=float, default=1e-5)
-parser.add_argument('--model', type=str, default='Transolver_1D')
+parser.add_argument('--model', type=str, default='Transolver_2D')
 parser.add_argument('--n-hidden', type=int, default=64, help='hidden dim')
 parser.add_argument('--n-layers', type=int, default=3, help='layers')
 parser.add_argument('--n-heads', type=int, default=4)
 parser.add_argument('--batch-size', type=int, default=8)
-parser.add_argument("--gpu", type=str, default='1', help="GPU index to use")
+parser.add_argument("--gpu", type=str, default='0', help="GPU index to use")
 parser.add_argument('--max_grad_norm', type=float, default=None)
-parser.add_argument('--downsample', type=int, default=5)
+parser.add_argument('--downsamplex', type=int, default=1)
+parser.add_argument('--downsampley', type=int, default=1)
 parser.add_argument('--mlp_ratio', type=int, default=1)
 parser.add_argument('--dropout', type=float, default=0.0)
-parser.add_argument('--ntrain', type=int, default=1000)
 parser.add_argument('--unified_pos', type=int, default=0)
 parser.add_argument('--ref', type=int, default=8)
 parser.add_argument('--slice_num', type=int, default=32)
 parser.add_argument('--eval', type=int, default=0)
-parser.add_argument('--save_name', type=str, default='elas_Transolver')
-parser.add_argument('--data_path', type=str, default='/data')
+parser.add_argument('--save_name', type=str, default='pipe_UniPDE')
+parser.add_argument('--data_path', type=str, default='./data/fno/pipe')
 parser.add_argument('--use_wandb', type=int, default=1, help='Whether to use Weights & Biases logging')
 parser.add_argument('--wandb_project', type=str, default='PDE-Solving', help='W&B project name')
 parser.add_argument('--wandb_entity', type=str, default=None, help='W&B entity name')
@@ -41,6 +34,14 @@ eval = args.eval
 save_name = args.save_name
 
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+
+import numpy as np
+import torch
+from tqdm import *
+from utils.testloss import TestLoss
+from model_dict import get_model
+from utils.normalizer import UnitTransformer
+from torch.cuda.amp import autocast, GradScaler
 
 
 def count_parameters(model):
@@ -66,33 +67,51 @@ def main():
     # Initialize gradient scaler for AMP
     scaler = GradScaler() if args.use_amp else None
     
-    ntrain = args.ntrain
+    INPUT_X = args.data_path + '/Pipe_X.npy'
+    INPUT_Y = args.data_path + '/Pipe_Y.npy'
+    OUTPUT_Sigma = args.data_path + '/Pipe_Q.npy'
+
+    ntrain = 1000
     ntest = 200
+    N = 1200
 
-    PATH_Sigma = args.data_path + '/elasticity/Meshes/Random_UnitCell_sigma_10.npy'
-    PATH_XY = args.data_path + '/elasticity/Meshes/Random_UnitCell_XY_10.npy'
+    r1 = args.downsamplex
+    r2 = args.downsampley
+    s1 = int(((129 - 1) / r1) + 1)
+    s2 = int(((129 - 1) / r2) + 1)
 
-    input_s = np.load(PATH_Sigma)
-    input_s = torch.tensor(input_s, dtype=torch.float).permute(1, 0)
-    input_xy = np.load(PATH_XY)
-    input_xy = torch.tensor(input_xy, dtype=torch.float).permute(2, 0, 1)
+    inputX = np.load(INPUT_X)
+    inputX = torch.tensor(inputX, dtype=torch.float)
+    inputY = np.load(INPUT_Y)
+    inputY = torch.tensor(inputY, dtype=torch.float)
+    input = torch.stack([inputX, inputY], dim=-1)
 
-    train_s = input_s[:ntrain]
-    test_s = input_s[-ntest:]
-    train_xy = input_xy[:ntrain]
-    test_xy = input_xy[-ntest:]
+    output = np.load(OUTPUT_Sigma)[:, 0]
+    output = torch.tensor(output, dtype=torch.float)
+    print(input.shape, output.shape)
+    x_train = input[:N][:ntrain, ::r1, ::r2][:, :s1, :s2]
+    y_train = output[:N][:ntrain, ::r1, ::r2][:, :s1, :s2]
+    x_test = input[:N][-ntest:, ::r1, ::r2][:, :s1, :s2]
+    y_test = output[:N][-ntest:, ::r1, ::r2][:, :s1, :s2]
+    x_train = x_train.reshape(ntrain, -1, 2)
+    x_test = x_test.reshape(ntest, -1, 2)
+    y_train = y_train.reshape(ntrain, -1)
+    y_test = y_test.reshape(ntest, -1)
 
-    print(input_s.shape, input_xy.shape)
+    x_normalizer = UnitTransformer(x_train)
+    y_normalizer = UnitTransformer(y_train)
 
-    y_normalizer = UnitTransformer(train_s)
+    x_train = x_normalizer.encode(x_train)
+    x_test = x_normalizer.encode(x_test)
+    y_train = y_normalizer.encode(y_train)
 
-    train_s = y_normalizer.encode(train_s)
+    x_normalizer.cuda()
     y_normalizer.cuda()
 
-    train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(train_xy, train_xy, train_s),
+    train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_train, x_train, y_train),
                                                batch_size=args.batch_size,
                                                shuffle=True)
-    test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(test_xy, test_xy, test_s),
+    test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_test, x_test, y_test),
                                               batch_size=args.batch_size,
                                               shuffle=False)
 
@@ -109,11 +128,9 @@ def main():
                                   out_dim=1,
                                   slice_num=args.slice_num,
                                   ref=args.ref,
-                                  unified_pos=args.unified_pos).cuda()
-
-    # compile the model, autotuning for performance
-    model = torch.compile(model, mode="max-autotune")
-
+                                  unified_pos=args.unified_pos,
+                                  H=s1, W=s2).cuda()
+    
     if args.use_wandb and not eval:
         wandb.watch(model, log_freq=100)
 
@@ -122,17 +139,19 @@ def main():
     print(args)
     print(model)
     count_parameters(model)
-    
-    epochs = args.epochs
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
-    
+
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=args.lr, epochs=args.epochs,
+                                                    steps_per_epoch=len(train_loader))
     myloss = TestLoss(size_average=False)
 
     if eval:
-        model.load_state_dict(torch.load("./checkpoints/" + save_name + ".pt"))
+        model.load_state_dict(torch.load("./checkpoints/" + save_name + ".pt"), strict=False)
+        torch.save(model.state_dict(), os.path.join('./checkpoints', save_name + '_resave' + '.pt'))
         model.eval()
         if not os.path.exists('./results/' + save_name + '/'):
             os.makedirs('./results/' + save_name + '/')
+
         rel_err = 0.0
         showcase = 10
         id = 0
@@ -147,45 +166,62 @@ def main():
                 with autocast(enabled=use_auto_cast):
                     out = model(x, None).squeeze(-1)
                     out = y_normalizer.decode(out)
-                
+
                 tl = myloss(out, y).item()
                 rel_err += tl
+
                 if id < showcase:
                     print(id)
                     plt.axis('off')
-                    plt.scatter(x=fx[0, :, 0].detach().cpu().numpy(), y=fx[0, :, 1].detach().cpu().numpy(),
-                                c=y[0, :].detach().cpu().numpy(), cmap='coolwarm')
+                    plt.pcolormesh(x[0, :, 0].reshape(129, 129).detach().cpu().numpy(),
+                                   x[0, :, 1].reshape(129, 129).detach().cpu().numpy(),
+                                   np.zeros([129, 129]),
+                                   shading='auto',
+                                   edgecolors='black', linewidths=0.1)
                     plt.colorbar()
-                    plt.clim(0, 1000)
-                    plt.savefig(
-                        os.path.join('./results/' + save_name + '/',
-                                     "gt_" + str(id) + ".pdf"), bbox_inches='tight', pad_inches=0)
+                    input_fig_path = os.path.join('./results/' + save_name + '/', "input_" + str(id) + ".pdf")
+                    plt.savefig(input_fig_path, bbox_inches='tight', pad_inches=0)
                     plt.close()
-
+                    
                     plt.axis('off')
-                    plt.scatter(x=fx[0, :, 0].detach().cpu().numpy(), y=fx[0, :, 1].detach().cpu().numpy(),
-                                c=out[0, :].detach().cpu().numpy(), cmap='coolwarm')
+                    plt.pcolormesh(x[0, :, 0].reshape(129, 129).detach().cpu().numpy(),
+                                   x[0, :, 1].reshape(129, 129).detach().cpu().numpy(),
+                                   out[0, :].reshape(129, 129).detach().cpu().numpy(),
+                                   shading='auto', cmap='coolwarm')
                     plt.colorbar()
-                    plt.clim(0, 1000)
-                    plt.savefig(
-                        os.path.join('./results/' + save_name + '/',
-                                     "pred_" + str(id) + ".pdf"), bbox_inches='tight', pad_inches=0)
+                    plt.clim(0, 0.3)
+                    pred_fig_path = os.path.join('./results/' + save_name + '/', "pred_" + str(id) + ".pdf")
+                    plt.savefig(pred_fig_path, bbox_inches='tight', pad_inches=0)
                     plt.close()
-
+                    
                     plt.axis('off')
-                    plt.scatter(x=fx[0, :, 0].detach().cpu().numpy(), y=fx[0, :, 1].detach().cpu().numpy(),
-                                c=((y[0, :] - out[0, :])).detach().cpu().numpy(), cmap='coolwarm')
-                    plt.clim(-8, 8)
+                    plt.pcolormesh(x[0, :, 0].reshape(129, 129).detach().cpu().numpy(),
+                                   x[0, :, 1].reshape(129, 129).detach().cpu().numpy(),
+                                   y[0, :].reshape(129, 129).detach().cpu().numpy(),
+                                   shading='auto', cmap='coolwarm')
                     plt.colorbar()
-                    plt.savefig(
-                        os.path.join('./results/' + save_name + '/',
-                                     "error_" + str(id) + ".pdf"), bbox_inches='tight', pad_inches=0)
+                    plt.clim(0, 0.3)
+                    gt_fig_path = os.path.join('./results/' + save_name + '/', "gt_" + str(id) + ".pdf")
+                    plt.savefig(gt_fig_path, bbox_inches='tight', pad_inches=0)
                     plt.close()
+                    
+                    plt.axis('off')
+                    plt.pcolormesh(x[0, :, 0].reshape(129, 129).detach().cpu().numpy(),
+                                   x[0, :, 1].reshape(129, 129).detach().cpu().numpy(),
+                                   out[0, :].reshape(129, 129).detach().cpu().numpy() - \
+                                   y[0, :].reshape(129, 129).detach().cpu().numpy(),
+                                   shading='auto', cmap='coolwarm')
+                    plt.colorbar()
+                    plt.clim(-0.02, 0.02)
+                    error_fig_path = os.path.join('./results/' + save_name + '/', "error_" + str(id) + ".pdf")
+                    plt.savefig(error_fig_path, bbox_inches='tight', pad_inches=0)
+                    plt.close()
+                    
+
 
         rel_err /= ntest
-        print("rel_err : {}".format(rel_err))
+        print("rel_err:{}".format(rel_err))
         
-        # Log evaluation metrics to W&B
         if args.use_wandb:
             wandb.log({"test/rel_error": rel_err})
     else:
@@ -196,12 +232,12 @@ def main():
 
             for pos, fx, y in train_loader:
 
-                x, fx, y = pos.cuda(), fx.cuda(), y.cuda()  # x:B,N,2  fx:B,N,2  y:B,N,
+                x, fx, y = pos.cuda(), fx.cuda(), y.cuda()  # x:B,N,2  fx:B,N,2  y:B,N
                 optimizer.zero_grad()
                 
-                # Use AMP for training if enabled
+                # Use AMP for forward pass
                 use_auto_cast = True if args.use_amp else False
-                with autocast(enabled=use_auto_cast): # added autocast
+                with autocast(enabled=use_auto_cast):
                     out = model(x, None).squeeze(-1)
                     out = y_normalizer.decode(out)
                     y = y_normalizer.decode(y)
@@ -222,7 +258,7 @@ def main():
                     optimizer.step()
                     
                 train_loss += loss.item()
-            scheduler.step()
+                scheduler.step()
 
             train_loss = train_loss / ntrain
             print("Epoch {} Train loss : {:.5f}".format(ep, train_loss))
@@ -235,15 +271,15 @@ def main():
                     
                     # Use AMP for evaluation
                     use_auto_cast = True if args.use_amp else False
-                    with autocast(enabled=use_auto_cast): # added autocast
+                    with autocast(enabled=use_auto_cast):
                         out = model(x, None).squeeze(-1)
                         out = y_normalizer.decode(out)
-                    
+
                     tl = myloss(out, y).item()
                     rel_err += tl
 
             rel_err /= ntest
-            print("rel_err : {}".format(rel_err))
+            print("rel_err:{}".format(rel_err))
             
             # Log metrics to wandb
             if args.use_wandb:
@@ -258,7 +294,12 @@ def main():
                 if not os.path.exists('./checkpoints'):
                     os.makedirs('./checkpoints')
                 print('save model')
-                torch.save(model.state_dict(), os.path.join('./checkpoints', save_name + '.pt'))
+                checkpoint_path = os.path.join('./checkpoints', save_name + '.pt')
+                torch.save(model.state_dict(), checkpoint_path)
+                
+                # Log checkpoint to wandb
+                if args.use_wandb:
+                    wandb.save(checkpoint_path)
 
         if not os.path.exists('./checkpoints'):
             os.makedirs('./checkpoints')
@@ -266,7 +307,7 @@ def main():
         final_checkpoint_path = os.path.join('./checkpoints', save_name + '.pt')
         torch.save(model.state_dict(), final_checkpoint_path)
         
-        # Save final model to wandb and finish session
+        # Save final model to wandb
         if args.use_wandb:
             wandb.save(final_checkpoint_path)
             wandb.finish()

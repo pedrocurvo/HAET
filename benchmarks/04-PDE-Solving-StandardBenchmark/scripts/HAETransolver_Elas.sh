@@ -16,17 +16,16 @@ module load CUDA/12.4.0
 
 cd $HOME/HAET/benchmarks/04-PDE-Solving-StandardBenchmark
 
-srun python exp_airfoil.py \
-# --gpu 5 \
---model HAETransolver_Structured_Mesh_2D \
+srun python exp_elas.py \
+--model Transolver_Irregular_Mesh \
 --n-hidden 128 \
 --n-heads 8 \
 --n-layers 8 \
 --lr 0.001 \
 --max_grad_norm 0.1 \
---batch-size 4 \
+--batch-size 1 \
 --slice_num 64 \
 --unified_pos 0 \
 --ref 8 \
 --eval 0 \
---save_name airfoil_HAETransolver
+--save_name elas_HAETransolver \
