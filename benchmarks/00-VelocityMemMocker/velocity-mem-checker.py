@@ -6,6 +6,7 @@ import time
 import torch
 import sys
 import os
+from torch.amp import autocast # Updated to use torch.amp instead of torch.cuda.amp
 
 # Add the project root to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -34,36 +35,38 @@ def benchmark_model(num_points, space_dim=1, fun_dim=1, n_hidden=256):
         space_dim=space_dim,
         fun_dim=fun_dim,
         n_hidden=n_hidden,
-        c_hidden=None,  # Defaulting ErwinTransformer specific params
-        ball_sizes=None,
-        enc_num_heads=None,
-        enc_depths=None,
-        dec_num_heads=None,
-        dec_depths=None,
-        strides=None,
+        n_layers=1,
+        n_head=8,
+        mlp_ratio=2,
+        out_dim=4,
+        slice_num=32,
+        unified_pos=0
     ).cuda()
     model.eval()  # Set model to evaluation mode
 
     # Warm-up GPU
     for _ in range(3):
-        _ = model(x, fx)
+        with autocast(device_type='cuda'): # Updated to include device_type
+            _ = model(x, fx)
         torch.cuda.synchronize()
 
     # Measure forward pass time
     torch.cuda.synchronize()  # Wait for all kernels to complete before starting timer
     start_time = time.time()
-    output = model(x, fx)
+    with autocast(device_type='cuda'): # Updated to include device_type
+        output = model(x, fx)
     torch.cuda.synchronize()  # Wait for model forward pass to complete
     end_time = time.time()
     time_taken = end_time - start_time
     print(f"Forward pass time: {time_taken:.4f} seconds")
 
     # Measure memory usage
-    torch.cuda.reset_peak_stats()  # Reset peak memory stats before the operation
+    torch.cuda.reset_peak_memory_stats()  # Reset peak memory stats before the operation
     initial_memory = torch.cuda.memory_allocated()
 
     # Perform the operation for which memory is to be measured
-    output = model(x, fx)  # Re-run forward pass
+    with autocast(device_type='cuda'): # Updated to include device_type
+        output = model(x, fx)  # Re-run forward pass
     torch.cuda.synchronize()
     final_memory = torch.cuda.memory_allocated()
     peak_memory = torch.cuda.max_memory_allocated()  # Peak memory since last reset
@@ -76,14 +79,18 @@ def benchmark_model(num_points, space_dim=1, fun_dim=1, n_hidden=256):
 
 
 if __name__ == "__main__":
-    point_counts = [1000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000]
-    space_dim_test = 1
+    point_counts = [1000, 10000, 100000, 1000000, 2000000, 3000000]
+    space_dim_test = 3
     fun_dim_test = 1
     n_hidden_test = 256
-
+    
+    # Clear CUDA cache before starting benchmark
+    torch.cuda.empty_cache()
     print("Starting HAETransolver Benchmark...")
     for points in point_counts:
         try:
+            # Clear CUDA cache before each benchmark run
+            torch.cuda.empty_cache()
             time_taken, memory_used = benchmark_model(
                 num_points=points,
                 space_dim=space_dim_test,
