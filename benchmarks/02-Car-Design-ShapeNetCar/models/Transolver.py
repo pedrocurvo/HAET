@@ -69,7 +69,9 @@ class ErwinTransolver(nn.Module):
             nn.Dropout(dropout)
         )
         
-
+        # Initialize slice weights attribute
+        self.slice_weights = None
+        
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -97,6 +99,9 @@ class ErwinTransolver(nn.Module):
         log_neg_log_epsilon = torch.log(-torch.log(torch.tensor(self.epsilon, device=x.device)))
         slice_logits = self.in_project_slice(x_proj) - log_neg_log_epsilon
         slice_weights = torch.softmax(slice_logits / adaptive_temp, dim=2)
+        
+        # Store the slice weights for later access
+        self.slice_weights = slice_weights
         
         # Compute weights norm: w(k)_norm ← sum_i(w(k)_i)
         slice_norm = slice_weights.sum(2, keepdim=True)
@@ -138,12 +143,17 @@ class ErwinTransolver(nn.Module):
         
         # Reshape back to original format [B, H, G, C]
         processed_states = processed_states.reshape(B, H, G, C)
+
         
         # Deslice back: x′(k) ← Deslice(s′, w(k))
         out = torch.einsum("bhgc,bhng->bhnc", processed_states, slice_weights)
         out = rearrange(out, 'b h n d -> b n (h d)')
         
         return self.to_out(out)
+
+    def get_slice_weights(self):
+        """Return the slice weights from the latest forward pass."""
+        return self.slice_weights
 
 
 class MLP(nn.Module):
@@ -207,6 +217,10 @@ class Transolver_block(nn.Module):
             return self.mlp2(self.ln_3(fx))
         else:
             return fx
+    
+    def get_slice_weights(self):
+        """Return the slice weights from the attention module."""
+        return self.Attn.get_slice_weights()
 
 
 class Model(nn.Module):
@@ -301,3 +315,7 @@ class Model(nn.Module):
             fx = block(fx)
 
         return fx[0]
+        
+    def get_last_block_slice_weights(self):
+        """Return the slice weights from the last transformer block."""
+        return self.blocks[-1].get_slice_weights()
