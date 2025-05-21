@@ -127,7 +127,7 @@ def create_model(args):
     Returns:
         torch.nn.Module: Initialized model
     """
-    if args.cfd_model == 'ErwinTransolverNoEmbedding':
+    if args.cfd_model == 'ErwinTransolverDefault':
         model = Model(
             n_hidden=args.n_hidden,
             n_layers=args.n_layers,
