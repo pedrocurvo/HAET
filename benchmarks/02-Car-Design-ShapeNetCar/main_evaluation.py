@@ -18,6 +18,14 @@ import scipy as sc
 from models.Transolver import Model
 from tqdm import tqdm
 from torch.cuda.amp import autocast
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.colors import Normalize
+import matplotlib.tri as mtri
+from utils.visualization import visualize_car_and_slices
+from matplotlib.colors import Normalize
+import matplotlib.tri as mtri
 
 
 def parse_arguments():
@@ -58,7 +66,7 @@ def parse_arguments():
                         help='MLP ratio for transformer')
     parser.add_argument('--out_dim', default=4, type=int,
                         help='Output dimension')
-    parser.add_argument('--slice_num', default=128, type=int,
+    parser.add_argument('--slice_num', default=32, type=int,
                         help='Number of slices for the model')
     parser.add_argument('--unified_pos', default=0, type=int,
                         help='Whether to use unified position encoding')
@@ -84,6 +92,12 @@ def parse_arguments():
                         help='WandB entity name')
     parser.add_argument('--disable_wandb', action='store_true',
                         help='Disable WandB logging')
+                        
+    # Visualization parameters
+    parser.add_argument('--visualize', action='store_true',
+                        help='Enable visualization of car mesh and slice weights')
+    parser.add_argument('--visualize_samples', default='0', type=str,
+                        help='Comma-separated indices of samples to visualize (e.g., "0,1,2")')
     
     return parser.parse_args()
 
@@ -236,6 +250,15 @@ else:
 if not os.path.exists(results_dir):
     os.makedirs(results_dir)
     print(f"Created results directory: {results_dir}")
+
+# Parse visualization samples if visualization is requested
+visualize_samples = []
+if args.visualize and args.visualize_samples:
+    visualize_samples = [int(idx.strip()) for idx in args.visualize_samples.split(',') if idx.strip()]
+    visualize_dir = os.path.join(results_dir, 'visualizations')
+    if not os.path.exists(visualize_dir):
+        os.makedirs(visualize_dir)
+        print(f"Created visualizations directory: {visualize_dir}")
 
 with torch.no_grad():
     model.eval()
@@ -394,4 +417,10 @@ with torch.no_grad():
         wandb.finish()
     
     # Log results to wandb
-    log_final_results_to_wandb()
+    # log_final_results_to_wandb()
+    
+    # Visualize car mesh and slice weights for selected samples
+    if args.visualize and len(visualize_samples) > 0:
+        print(f"\nGenerating visualizations for {len(visualize_samples)} samples...")
+        for sample_idx in visualize_samples:
+            visualize_car_and_slices(sample_idx, results_dir, model, val_ds, args)
