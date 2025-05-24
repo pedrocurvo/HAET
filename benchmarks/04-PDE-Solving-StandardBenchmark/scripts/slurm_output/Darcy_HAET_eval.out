@@ -1,0 +1,248 @@
+============================================================================================== 
+Warning! Mixing Conda and module environments may lead to corruption of the
+user environment. 
+We do not recommend users mixing those two environments unless absolutely
+necessary. Note that 
+SURF does not provide any support for Conda environment.
+For more information, please refer to our software policy page:
+https://servicedesk.surf.nl/wiki/display/WIKI/Software+policy+Snellius#SoftwarepolicySnellius-UseofAnacondaandMinicondaenvironmentsonSnellius 
+
+Remember that many packages have already been installed on the system and can
+be loaded using 
+the 'module load <package__name>' command. If you are uncertain if a package is
+already available 
+on the system, please use 'module avail' or 'module spider' to search for it.
+============================================================================================== 
+/home/scur2648/.local/lib/python3.12/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+CUDA is available: True
+CUDA device count: 1
+CUDA_VISIBLE_DEVICES: 0
+Using device: cuda
+Dataloading is over.
+Namespace(lr=0.001, epochs=500, weight_decay=1e-05, model='HAETransolver_Structured_Mesh_2D', n_hidden=128, n_layers=8, n_heads=8, batch_size=4, gpu='0', max_grad_norm=0.1, downsample=5, mlp_ratio=1, dropout=0.0, ntrain=1000, unified_pos=1, ref=8, slice_num=64, eval=1, save_name='darcy_UniPDE', data_path='./data/Darcy_421', use_wandb=0, wandb_project='PDE-Solving', wandb_entity=None, use_amp=1)
+Model(
+  (preprocess): MLP(
+    (linear_pre): Sequential(
+      (0): Linear(in_features=65, out_features=256, bias=True)
+      (1): GELU(approximate='none')
+    )
+    (linear_post): Linear(in_features=256, out_features=128, bias=True)
+    (linears): ModuleList()
+  )
+  (blocks): ModuleList(
+    (0-6): 7 x TransolverErwinBlock(
+      (ln_1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      (Attn): Physics_Attention_Structured_Mesh_2D(
+        (in_project_x): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (in_project_slice): Linear(in_features=16, out_features=64, bias=True)
+        (ada_temp_linear): Linear(in_features=16, out_features=1, bias=True)
+        (erwin): ErwinTransformer(
+          (encoder): ModuleList(
+            (0): BasicLayer(
+              (blocks): ModuleList(
+                (0-1): 2 x ErwinTransformerBlock(
+                  (norm1): RMSNorm((16,), eps=None, elementwise_affine=True)
+                  (norm2): RMSNorm((16,), eps=None, elementwise_affine=True)
+                  (BMSA): BallMSA(
+                    (qkv): Linear(in_features=16, out_features=48, bias=True)
+                    (proj): Linear(in_features=16, out_features=16, bias=True)
+                    (pe_proj): Linear(in_features=2, out_features=16, bias=True)
+                  )
+                  (swiglu): SwiGLU(
+                    (w1): Linear(in_features=16, out_features=16, bias=True)
+                    (w2): Linear(in_features=16, out_features=16, bias=True)
+                    (w3): Linear(in_features=16, out_features=16, bias=True)
+                  )
+                )
+              )
+              (pool): BallPooling(
+                (proj): Linear(in_features=36, out_features=32, bias=True)
+                (norm): BatchNorm1d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+              )
+            )
+          )
+          (bottleneck): BasicLayer(
+            (blocks): ModuleList(
+              (0-1): 2 x ErwinTransformerBlock(
+                (norm1): RMSNorm((32,), eps=None, elementwise_affine=True)
+                (norm2): RMSNorm((32,), eps=None, elementwise_affine=True)
+                (BMSA): BallMSA(
+                  (qkv): Linear(in_features=32, out_features=96, bias=True)
+                  (proj): Linear(in_features=32, out_features=32, bias=True)
+                  (pe_proj): Linear(in_features=2, out_features=32, bias=True)
+                )
+                (swiglu): SwiGLU(
+                  (w1): Linear(in_features=32, out_features=32, bias=True)
+                  (w2): Linear(in_features=32, out_features=32, bias=True)
+                  (w3): Linear(in_features=32, out_features=32, bias=True)
+                )
+              )
+            )
+          )
+          (decoder): ModuleList(
+            (0): BasicLayer(
+              (blocks): ModuleList(
+                (0-1): 2 x ErwinTransformerBlock(
+                  (norm1): RMSNorm((16,), eps=None, elementwise_affine=True)
+                  (norm2): RMSNorm((16,), eps=None, elementwise_affine=True)
+                  (BMSA): BallMSA(
+                    (qkv): Linear(in_features=16, out_features=48, bias=True)
+                    (proj): Linear(in_features=16, out_features=16, bias=True)
+                    (pe_proj): Linear(in_features=2, out_features=16, bias=True)
+                  )
+                  (swiglu): SwiGLU(
+                    (w1): Linear(in_features=16, out_features=16, bias=True)
+                    (w2): Linear(in_features=16, out_features=16, bias=True)
+                    (w3): Linear(in_features=16, out_features=16, bias=True)
+                  )
+                )
+              )
+              (unpool): BallUnpooling(
+                (proj): Linear(in_features=36, out_features=32, bias=True)
+                (norm): BatchNorm1d(16, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+              )
+            )
+          )
+        )
+        (to_out): Sequential(
+          (0): Linear(in_features=128, out_features=128, bias=True)
+          (1): Dropout(p=0.0, inplace=False)
+        )
+      )
+      (ln_2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      (mlp): MLP(
+        (linear_pre): Sequential(
+          (0): Linear(in_features=128, out_features=128, bias=True)
+          (1): GELU(approximate='none')
+        )
+        (linear_post): Linear(in_features=128, out_features=128, bias=True)
+        (linears): ModuleList()
+      )
+    )
+    (7): TransolverErwinBlock(
+      (ln_1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      (Attn): Physics_Attention_Structured_Mesh_2D(
+        (in_project_x): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (in_project_slice): Linear(in_features=16, out_features=64, bias=True)
+        (ada_temp_linear): Linear(in_features=16, out_features=1, bias=True)
+        (erwin): ErwinTransformer(
+          (encoder): ModuleList(
+            (0): BasicLayer(
+              (blocks): ModuleList(
+                (0-1): 2 x ErwinTransformerBlock(
+                  (norm1): RMSNorm((16,), eps=None, elementwise_affine=True)
+                  (norm2): RMSNorm((16,), eps=None, elementwise_affine=True)
+                  (BMSA): BallMSA(
+                    (qkv): Linear(in_features=16, out_features=48, bias=True)
+                    (proj): Linear(in_features=16, out_features=16, bias=True)
+                    (pe_proj): Linear(in_features=2, out_features=16, bias=True)
+                  )
+                  (swiglu): SwiGLU(
+                    (w1): Linear(in_features=16, out_features=16, bias=True)
+                    (w2): Linear(in_features=16, out_features=16, bias=True)
+                    (w3): Linear(in_features=16, out_features=16, bias=True)
+                  )
+                )
+              )
+              (pool): BallPooling(
+                (proj): Linear(in_features=36, out_features=32, bias=True)
+                (norm): BatchNorm1d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+              )
+            )
+          )
+          (bottleneck): BasicLayer(
+            (blocks): ModuleList(
+              (0-1): 2 x ErwinTransformerBlock(
+                (norm1): RMSNorm((32,), eps=None, elementwise_affine=True)
+                (norm2): RMSNorm((32,), eps=None, elementwise_affine=True)
+                (BMSA): BallMSA(
+                  (qkv): Linear(in_features=32, out_features=96, bias=True)
+                  (proj): Linear(in_features=32, out_features=32, bias=True)
+                  (pe_proj): Linear(in_features=2, out_features=32, bias=True)
+                )
+                (swiglu): SwiGLU(
+                  (w1): Linear(in_features=32, out_features=32, bias=True)
+                  (w2): Linear(in_features=32, out_features=32, bias=True)
+                  (w3): Linear(in_features=32, out_features=32, bias=True)
+                )
+              )
+            )
+          )
+          (decoder): ModuleList(
+            (0): BasicLayer(
+              (blocks): ModuleList(
+                (0-1): 2 x ErwinTransformerBlock(
+                  (norm1): RMSNorm((16,), eps=None, elementwise_affine=True)
+                  (norm2): RMSNorm((16,), eps=None, elementwise_affine=True)
+                  (BMSA): BallMSA(
+                    (qkv): Linear(in_features=16, out_features=48, bias=True)
+                    (proj): Linear(in_features=16, out_features=16, bias=True)
+                    (pe_proj): Linear(in_features=2, out_features=16, bias=True)
+                  )
+                  (swiglu): SwiGLU(
+                    (w1): Linear(in_features=16, out_features=16, bias=True)
+                    (w2): Linear(in_features=16, out_features=16, bias=True)
+                    (w3): Linear(in_features=16, out_features=16, bias=True)
+                  )
+                )
+              )
+              (unpool): BallUnpooling(
+                (proj): Linear(in_features=36, out_features=32, bias=True)
+                (norm): BatchNorm1d(16, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+              )
+            )
+          )
+        )
+        (to_out): Sequential(
+          (0): Linear(in_features=128, out_features=128, bias=True)
+          (1): Dropout(p=0.0, inplace=False)
+        )
+      )
+      (ln_2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      (mlp): MLP(
+        (linear_pre): Sequential(
+          (0): Linear(in_features=128, out_features=128, bias=True)
+          (1): GELU(approximate='none')
+        )
+        (linear_post): Linear(in_features=128, out_features=128, bias=True)
+        (linears): ModuleList()
+      )
+      (ln_3): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      (mlp2): Linear(in_features=128, out_features=1, bias=True)
+    )
+  )
+/gpfs/home2/scur2648/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_darcy2.py:190: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  checkpoint = torch.load(checkpoint_path, map_location=device)
+)
+Total Trainable Params: 1844489
+model evaluation
+Model dimensions: 85x85
+Loading model from ./checkpoints/darcy_UniPDE.pt
+Model weights loaded successfully
+1
+2
+3
+4
+5
+6
+7
+8
+9
+rel_err:0.005305175410135099
+/var/spool/slurm/slurmd/job11995428/slurm_script: line 35: --save_name: command not found
+
+JOB STATISTICS
+==============
+Job ID: 11995428
+Cluster: snellius
+User/Group: scur2648/scur2648
+State: RUNNING
+Nodes: 1
+Cores per node: 18
+CPU Utilized: 00:00:00
+CPU Efficiency: 0.00% of 00:22:12 core-walltime
+Job Wall-clock time: 00:01:14
+Memory Utilized: 0.00 MB
+Memory Efficiency: 0.00% of 120.00 GB (120.00 GB/node)
+WARNING: Efficiency statistics can only be obtained after the job has ended as seff tool is based on the accounting database data.
