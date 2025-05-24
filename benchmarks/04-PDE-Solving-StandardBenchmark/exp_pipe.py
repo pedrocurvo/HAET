@@ -1,6 +1,15 @@
 import os
 import argparse
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import wandb
+from tqdm import *
+from utils.testloss import TestLoss
+from model_dict import get_model
+from utils.normalizer import UnitTransformer
+from torch.amp import autocast, GradScaler
+import time
 
 parser = argparse.ArgumentParser('Training Transformer')
 
@@ -23,19 +32,16 @@ parser.add_argument('--ref', type=int, default=8)
 parser.add_argument('--slice_num', type=int, default=32)
 parser.add_argument('--eval', type=int, default=0)
 parser.add_argument('--save_name', type=str, default='pipe_UniPDE')
-parser.add_argument('--data_path', type=str, default='/data/fno/pipe')
+parser.add_argument('--data_path', type=str, default='./data/pipe')
+parser.add_argument('--use_wandb', type=int, default=1, help='Whether to use Weights & Biases logging')
+parser.add_argument('--wandb_project', type=str, default='PDE-Solving', help='W&B project name')
+parser.add_argument('--wandb_entity', type=str, default=None, help='W&B entity name')
+parser.add_argument('--use_amp', type=int, default=1, help='Whether to use Automatic Mixed Precision')
 args = parser.parse_args()
 eval = args.eval
 save_name = args.save_name
 
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-
-import numpy as np
-import torch
-from tqdm import *
-from utils.testloss import TestLoss
-from model_dict import get_model
-from utils.normalizer import UnitTransformer
 
 
 def count_parameters(model):
@@ -49,6 +55,18 @@ def count_parameters(model):
 
 
 def main():
+    # Initialize wandb if enabled
+    if args.use_wandb:
+        wandb.init(
+            project=args.wandb_project,
+            entity=args.wandb_entity,
+            config=vars(args),
+            name=save_name,
+        )
+    
+    # Initialize gradient scaler for AMP
+    scaler = GradScaler('cuda') if args.use_amp else None
+    
     INPUT_X = args.data_path + '/Pipe_X.npy'
     INPUT_Y = args.data_path + '/Pipe_Y.npy'
     OUTPUT_Sigma = args.data_path + '/Pipe_Q.npy'
@@ -99,19 +117,25 @@ def main():
 
     print("Dataloading is over.")
 
-    model = get_model(args).Model(space_dim=2,
-                                  n_layers=args.n_layers,
-                                  n_hidden=args.n_hidden,
-                                  dropout=args.dropout,
-                                  n_head=args.n_heads,
-                                  Time_Input=False,
-                                  mlp_ratio=args.mlp_ratio,
-                                  fun_dim=0,
-                                  out_dim=1,
-                                  slice_num=args.slice_num,
-                                  ref=args.ref,
-                                  unified_pos=args.unified_pos,
-                                  H=s1, W=s2).cuda()
+    model = get_model(args)(space_dim=2,
+                            n_layers=args.n_layers,
+                            n_hidden=args.n_hidden,
+                            dropout=args.dropout,
+                            n_head=args.n_heads,
+                            Time_Input=False,
+                            mlp_ratio=args.mlp_ratio,
+                            fun_dim=0,
+                            out_dim=1,
+                            slice_num=args.slice_num,
+                            ref=args.ref,
+                            unified_pos=args.unified_pos,
+                            H=s1, W=s2).cuda()
+
+    # compile the model, autotuning for performance
+    model = torch.compile(model, mode="max-autotune")
+    
+    if args.use_wandb and not eval:
+        wandb.watch(model, log_freq=100)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
@@ -196,6 +220,10 @@ def main():
         rel_err /= ntest
         print("rel_err:{}".format(rel_err))
     else:
+        if args.use_wandb:
+            wandb.init(project=args.wandb_project, entity=args.wandb_entity)
+            wandb.config.update(args)
+
         for ep in range(args.epochs):
 
             model.train()
@@ -205,18 +233,28 @@ def main():
 
                 x, fx, y = pos.cuda(), fx.cuda(), y.cuda()  # x:B,N,2  fx:B,N,2  y:B,N
                 optimizer.zero_grad()
-                out = model(x, None).squeeze(-1)
-
-                out = y_normalizer.decode(out)
-                y = y_normalizer.decode(y)
-
-                loss = myloss(out, y)
-                loss.backward()
-
-                # print("loss:{}".format(loss.item()/batch_size))
-                if args.max_grad_norm is not None:
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
-                optimizer.step()
+                
+                # Use AMP for training if enabled
+                use_auto_cast = True if args.use_amp else False
+                with autocast(enabled=use_auto_cast):
+                    out = model(x, None).squeeze(-1)
+                    out = y_normalizer.decode(out)
+                    y = y_normalizer.decode(y)
+                    loss = myloss(out, y)
+                
+                # Use scaler for backward pass if AMP is enabled
+                if args.use_amp:
+                    scaler.scale(loss).backward()
+                    if args.max_grad_norm is not None:
+                        scaler.unscale_(optimizer)
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    loss.backward()
+                    if args.max_grad_norm is not None:
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                    optimizer.step()
                 train_loss += loss.item()
                 scheduler.step()
 
@@ -228,14 +266,20 @@ def main():
             with torch.no_grad():
                 for pos, fx, y in test_loader:
                     x, fx, y = pos.cuda(), fx.cuda(), y.cuda()
-                    out = model(x, None).squeeze(-1)
-                    out = y_normalizer.decode(out)
+                    # Use AMP for evaluation if enabled
+                    use_auto_cast = True if args.use_amp else False
+                    with autocast('cuda', enabled=use_auto_cast):
+                        out = model(x, None).squeeze(-1)
+                        out = y_normalizer.decode(out)
 
                     tl = myloss(out, y).item()
                     rel_err += tl
 
             rel_err /= ntest
             print("rel_err:{}".format(rel_err))
+
+            if args.use_wandb:
+                wandb.log({"epoch": ep, "train_loss": train_loss, "rel_err": rel_err})
 
             if ep % 100 == 0:
                 if not os.path.exists('./checkpoints'):
@@ -250,4 +294,7 @@ def main():
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     main()
+    end_time = time.time()
+    print("Total time: {:.2f} seconds".format(end_time - start_time))

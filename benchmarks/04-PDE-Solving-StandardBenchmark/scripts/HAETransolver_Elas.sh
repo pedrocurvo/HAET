@@ -2,11 +2,11 @@
 
 #SBATCH --partition=gpu_a100
 #SBATCH --gpus=1
-#SBATCH --job-name=erwintransolver
+#SBATCH --job-name=elasticity
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=20:00:00
-#SBATCH --output=slurm_output/slurm_output_%A.out
+#SBATCH --output=slurm_output/slurm_output_elasticity_training_128_%A.out
 
 module purge
 module load 2024
@@ -16,19 +16,13 @@ module load CUDA/12.4.0
 
 cd $HOME/HAET/benchmarks/04-PDE-Solving-StandardBenchmark || exit 1 # Change to your working directory
 
-# Create environment if it doesn't exist under .conda
-if [ ! -d "$HOME/.conda/envs/erwin" ]; then
-    echo "Creating fresh conda environment..."
-    conda create -y -n erwin python=3.9
-    source activate erwin
-    pip install --upgrade pip
-    pip install -r requirements.txt
-    pip install -U "huggingface_hub[cli]"
-else
-    echo "Using existing conda environment..."
-    source activate erwin
-    pip install -r requirements.txt
-fi
+# # unninstall torch and torchvision if they exist
+# srun pip uninstall -y torch torchvision torchaudio torch-cluster torch-scatter
+# # Install the required packages
+# srun pip cache purge
+# srun pip install torch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cu124 --force-reinstall
+# srun pip install torch-cluster -f https://data.pyg.org/whl/torch-2.5.0+cu124.html --force-reinstall
+# srun pip install torch-scatter -f https://data.pyg.org/whl/torch-2.5.0+cu124.html --force-reinstall
 
 # Check for and handle environment issues
 if ! command -v python3 &> /dev/null; then
@@ -36,16 +30,20 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
+echo "Running experiment on Elasticity dataset"
+
 srun python exp_elas.py \
---model Transolver_Irregular_Mesh \
---n-hidden 128 \
---n-heads 8 \
---n-layers 8 \
---lr 0.001 \
---max_grad_norm 0.1 \
---batch-size 1 \
---slice_num 64 \
---unified_pos 0 \
---ref 8 \
---eval 0 \
---save_name elas_HAETransolver \
+    --model HAETransolver_Irregular_Mesh \
+    --n-hidden 128 \
+    --n-heads 8 \
+    --n-layers 8 \
+    --lr 0.001 \
+    --max_grad_norm 0.1 \
+    --batch-size 1 \
+    --slice_num 128 \
+    --unified_pos 0 \
+    --ref 8 \
+    --eval 0 \
+    --save_name elas_HAETransolver_128
+
+echo "Experiment completed. Check the output files for results."

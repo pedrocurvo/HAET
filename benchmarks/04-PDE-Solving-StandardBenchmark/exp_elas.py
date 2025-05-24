@@ -9,6 +9,7 @@ from utils.testloss import TestLoss
 from model_dict import get_model
 from utils.normalizer import UnitTransformer
 from torch.cuda.amp import autocast, GradScaler
+import time
 
 parser = argparse.ArgumentParser('Training Transformer')
 
@@ -20,7 +21,7 @@ parser.add_argument('--n-hidden', type=int, default=64, help='hidden dim')
 parser.add_argument('--n-layers', type=int, default=3, help='layers')
 parser.add_argument('--n-heads', type=int, default=4)
 parser.add_argument('--batch-size', type=int, default=8)
-parser.add_argument("--gpu", type=str, default='1', help="GPU index to use")
+parser.add_argument("--gpu", type=str, default='0', help="GPU index to use")
 parser.add_argument('--max_grad_norm', type=float, default=None)
 parser.add_argument('--downsample', type=int, default=5)
 parser.add_argument('--mlp_ratio', type=int, default=1)
@@ -31,7 +32,7 @@ parser.add_argument('--ref', type=int, default=8)
 parser.add_argument('--slice_num', type=int, default=32)
 parser.add_argument('--eval', type=int, default=0)
 parser.add_argument('--save_name', type=str, default='elas_Transolver')
-parser.add_argument('--data_path', type=str, default='/data')
+parser.add_argument('--data_path', type=str, default='./data')
 parser.add_argument('--use_wandb', type=int, default=1, help='Whether to use Weights & Biases logging')
 parser.add_argument('--wandb_project', type=str, default='PDE-Solving', help='W&B project name')
 parser.add_argument('--wandb_entity', type=str, default=None, help='W&B entity name')
@@ -98,18 +99,18 @@ def main():
 
     print("Dataloading is over.")
 
-    model = get_model(args).Model(space_dim=2,
-                                  n_layers=args.n_layers,
-                                  n_hidden=args.n_hidden,
-                                  dropout=args.dropout,
-                                  n_head=args.n_heads,
-                                  Time_Input=False,
-                                  mlp_ratio=args.mlp_ratio,
-                                  fun_dim=0,
-                                  out_dim=1,
-                                  slice_num=args.slice_num,
-                                  ref=args.ref,
-                                  unified_pos=args.unified_pos).cuda()
+    model = get_model(args)(space_dim=2,
+                            n_layers=args.n_layers,
+                            n_hidden=args.n_hidden,
+                            dropout=args.dropout,
+                            n_head=args.n_heads,
+                            Time_Input=False,
+                            mlp_ratio=args.mlp_ratio,
+                            fun_dim=0,
+                            out_dim=1,
+                            slice_num=args.slice_num,
+                            ref=args.ref,
+                            unified_pos=args.unified_pos).cuda()
 
     # compile the model, autotuning for performance
     model = torch.compile(model, mode="max-autotune")
@@ -222,7 +223,7 @@ def main():
                     optimizer.step()
                     
                 train_loss += loss.item()
-            scheduler.step()
+                scheduler.step()
 
             train_loss = train_loss / ntrain
             print("Epoch {} Train loss : {:.5f}".format(ep, train_loss))
@@ -273,4 +274,7 @@ def main():
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     main()
+    end_time = time.time()
+    print("Total time: {:.2f} seconds".format(end_time - start_time))

@@ -1,6 +1,16 @@
 import os
 import argparse
 import matplotlib.pyplot as plt
+import numpy as np
+import scipy.io as scio
+import torch
+import wandb
+from tqdm import *
+from utils.testloss import TestLoss
+from model_dict import get_model
+from utils.normalizer import UnitTransformer
+from torch.cuda.amp import autocast, GradScaler
+import time
 
 parser = argparse.ArgumentParser('Training Transformer')
 
@@ -23,19 +33,15 @@ parser.add_argument('--ref', type=int, default=8)
 parser.add_argument('--slice_num', type=int, default=32)
 parser.add_argument('--eval', type=int, default=0)
 parser.add_argument('--save_name', type=str, default='plas_Transolver')
-parser.add_argument('--data_path', type=str, default='/data/fno/plas_N987_T20.mat')
+parser.add_argument('--data_path', type=str, default='./data/plasticity/plas_N987_T20.mat')
+parser.add_argument('--use_wandb', type=int, default=1, help='Whether to use Weights & Biases logging')
+parser.add_argument('--wandb_project', type=str, default='PDE-Solving', help='W&B project name')
+parser.add_argument('--wandb_entity', type=str, default=None, help='W&B entity name')
+parser.add_argument('--use_amp', type=int, default=1, help='Whether to use Automatic Mixed Precision')
 args = parser.parse_args()
 eval = args.eval
 save_name = args.save_name
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-
-import numpy as np
-import scipy.io as scio
-import torch
-from tqdm import *
-from utils.testloss import TestLoss
-from model_dict import get_model
-from utils.normalizer import UnitTransformer
 
 
 def count_parameters(model):
@@ -86,6 +92,18 @@ def random_collate_fn(batch):
 
 
 def main():
+    # Initialize wandb if enabled
+    if args.use_wandb:
+        wandb.init(
+            project=args.wandb_project,
+            entity=args.wandb_entity,
+            config=vars(args),
+            name=save_name,
+        )
+    
+    # Initialize gradient scaler for AMP
+    scaler = GradScaler() if args.use_amp else None
+    
     DATA_PATH = args.data_path
 
     N = 987
@@ -142,18 +160,24 @@ def main():
                                               batch_size=args.batch_size, shuffle=False)
 
     print("Dataloading is over.")
-    model = get_model(args).Model(space_dim=2,
-                                  n_hidden=args.n_hidden,
-                                  n_layers=args.n_layers,
-                                  Time_Input=True,
-                                  n_head=args.n_heads,
-                                  fun_dim=1,
-                                  out_dim=Deformation,
-                                  mlp_ratio=args.mlp_ratio,
-                                  slice_num=args.slice_num,
-                                  unified_pos=args.unified_pos,
-                                  H=s1,
-                                  W=s2).cuda()
+    model = get_model(args)(space_dim=2,
+                            n_hidden=args.n_hidden,
+                            n_layers=args.n_layers,
+                            Time_Input=True,
+                            n_head=args.n_heads,
+                            fun_dim=1,
+                            out_dim=Deformation,
+                            mlp_ratio=args.mlp_ratio,
+                            slice_num=args.slice_num,
+                            unified_pos=args.unified_pos,
+                            H=s1,
+                            W=s2).cuda()
+
+    # compile the model, autotuning for performance
+    model = torch.compile(model, mode="max-autotune")
+
+    if args.use_wandb and not eval:
+        wandb.watch(model, log_freq=100)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
@@ -239,14 +263,25 @@ def main():
                 x, fx, tim, yy = x.cuda(), fx.cuda(), tim.cuda(), yy.cuda()
                 bsz = x.shape[0]
 
-                for t in range(T):
-                    y = yy[..., t:t + 1]
-                    input_T = tim[:, t:t + 1].reshape(bsz, 1)  # B,step
-                    im = model(x, fx, T=input_T)
+                use_auto_cast = True if args.use_amp else False
+                with autocast(enabled=use_auto_cast):
+                    for t in range(T):
+                        y = yy[..., t:t + 1]
+                        input_T = tim[:, t:t + 1].reshape(bsz, 1)  # B,step
+                        im = model(x, fx, T=input_T)
 
-                    loss = myloss(im.reshape(bsz, -1), y.reshape(bsz, -1))
-                    train_l2_step += loss.item()
-                    optimizer.zero_grad()
+                        loss = myloss(im.reshape(bsz, -1), y.reshape(bsz, -1))
+                        train_l2_step += loss.item()
+
+                optimizer.zero_grad()
+                if args.use_amp:
+                    scaler.scale(loss).backward()
+                    if args.max_grad_norm is not None:
+                        scaler.unscale_(optimizer)
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
                     loss.backward()
                     if args.max_grad_norm is not None:
                         torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
@@ -276,6 +311,16 @@ def main():
                     test_l2_step += loss.item()
                     test_l2_full += myloss(pred.reshape(bsz, -1), yy.reshape(bsz, -1)).item()
 
+            # Log metrics to wandb
+            if args.use_wandb:
+                wandb.log({
+                    "train/step_loss": train_l2_step / ntrain / T,
+                    "test/step_loss": test_l2_step / ntest / T,
+                    "test/full_loss": test_l2_full / ntest,
+                    "epoch": ep,
+                    "learning_rate": scheduler.get_last_lr()[0]
+                })
+
             print("Epoch {} , train_step_loss:{:.5f} , test_step_loss:{:.5f} , test_full_loss:{:.5f}".format(ep,
                                                                                                              train_l2_step / ntrain / T,
                                                                                                              test_l2_step / ntest / T,
@@ -291,6 +336,12 @@ def main():
         print('save model')
         torch.save(model.state_dict(), os.path.join('./checkpoints', save_name + '.pt'))
 
+        if args.use_wandb:
+            wandb.finish()
+
 
 if __name__ == "__main__":
+    start_time = time.time()
     main()
+    end_time = time.time()
+    print("Total time: {:.2f} seconds".format(end_time - start_time))

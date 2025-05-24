@@ -4,9 +4,12 @@ import argparse
 import scipy.io as scio
 import numpy as np
 import torch
+import wandb
 from tqdm import *
 from utils.testloss import TestLoss
 from model_dict import get_model
+from torch.cuda.amp import autocast, GradScaler
+import time
 
 parser = argparse.ArgumentParser('Training Transformer')
 
@@ -28,20 +31,25 @@ parser.add_argument('--ref', type=int, default=8)
 parser.add_argument('--slice_num', type=int, default=32)
 parser.add_argument('--eval', type=int, default=0)
 parser.add_argument('--save_name', type=str, default='ns_2d_UniPDE')
-parser.add_argument('--data_path', type=str, default='/data/fno')
+parser.add_argument('--data_path', type=str, default='./data/fno')
+parser.add_argument('--use_wandb', type=int, default=1, help='Whether to use Weights & Biases logging')
+parser.add_argument('--wandb_project', type=str, default='PDE-Solving', help='W&B project name')
+parser.add_argument('--wandb_entity', type=str, default=None, help='W&B entity name')
+parser.add_argument('--use_amp', type=int, default=1, help='Whether to use Automatic Mixed Precision')
 args = parser.parse_args()
+eval = args.eval
+save_name = args.save_name
 
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+os.environ["WANDB__SERVICE_WAIT"] = "300"
 
-data_path = args.data_path + '/NavierStokes_V1e-5_N1200_T20/NavierStokes_V1e-5_N1200_T20.mat'
-# data_path = args.data_path + '/NavierStokes_V1e-5_N1200_T20.mat'
+# data_path = args.data_path + '/NavierStokes_V1e-5_N1200_T20/NavierStokes_V1e-5_N1200_T20.mat'
+data_path = args.data_path + '/NavierStokes_V1e-5_N1200_T20.mat'
 ntrain = 1000
 ntest = 200
 T_in = 10
 T = 10
 step = 1
-eval = args.eval
-save_name = args.save_name
 
 
 def count_parameters(model):
@@ -55,6 +63,18 @@ def count_parameters(model):
 
 
 def main():
+    # Initialize wandb if enabled
+    if args.use_wandb:
+        wandb.init(
+            project=args.wandb_project,
+            entity=args.wandb_entity,
+            config=vars(args),
+            name=save_name,  
+        )
+    
+    # Initialize gradient scaler for AMP
+    scaler = GradScaler() if args.use_amp else None
+    
     r = args.downsample
     h = int(((64 - 1) / r) + 1)
 
@@ -89,7 +109,7 @@ def main():
 
     print("Dataloading is over.")
 
-    model = get_model(args).Model(space_dim=2,
+    model = get_model(args)(space_dim=2,
                                   n_layers=args.n_layers,
                                   n_hidden=args.n_hidden,
                                   dropout=args.dropout,
@@ -102,6 +122,13 @@ def main():
                                   ref=args.ref,
                                   unified_pos=args.unified_pos,
                                   H=h, W=h).cuda()
+
+    # compile the model, autotuning for performance
+    model = torch.compile(model, mode="max-autotune")
+
+    # Add wandb model watching
+    if args.use_wandb and not eval:
+        wandb.watch(model, log_freq=100)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
@@ -128,14 +155,18 @@ def main():
                 id += 1
                 x, fx, yy = x.cuda(), fx.cuda(), yy.cuda()  # x : B, 4096, 2  fx : B, 4096  y : B, 4096, T
                 bsz = x.shape[0]
-                for t in range(0, T, step):
-                    im = model(x, fx=fx)
+                
+                # Use AMP for inference if enabled
+                use_auto_cast = True if args.use_amp else False
+                with autocast(enabled=use_auto_cast):
+                    for t in range(0, T, step):
+                        im = model(x, fx=fx)
 
-                    fx = torch.cat((fx[..., step:], im), dim=-1)
-                    if t == 0:
-                        pred = im
-                    else:
-                        pred = torch.cat((pred, im), -1)
+                        fx = torch.cat((fx[..., step:], im), dim=-1)
+                        if t == 0:
+                            pred = im
+                        else:
+                            pred = torch.cat((pred, im), -1)
 
                 if id < showcase:
                     print(id)
@@ -169,6 +200,10 @@ def main():
                     plt.close()
                 test_l2_full += myloss(pred.reshape(bsz, -1), yy.reshape(bsz, -1)).item()
             print(test_l2_full / ntest)
+            
+            # Log evaluation metrics to W&B
+            if args.use_wandb:
+                wandb.log({"test/full_loss": test_l2_full / ntest})
     else:
         for ep in range(args.epochs):
 
@@ -180,24 +215,28 @@ def main():
                 loss = 0
                 x, fx, yy = x.cuda(), fx.cuda(), yy.cuda()  # x: B,4096,2    fx: B,4096,T   y: B,4096,T
                 bsz = x.shape[0]
-
-                for t in range(0, T, step):
-                    y = yy[..., t:t + step]
-                    im = model(x, fx=fx)  # B , 4096 , 1
-                    loss += myloss(im.reshape(bsz, -1), y.reshape(bsz, -1))
-                    if t == 0:
-                        pred = im
-                    else:
-                        pred = torch.cat((pred, im), -1)
-                    fx = torch.cat((fx[..., step:], y), dim=-1)  # detach() & groundtruth
+                
+                # Use AMP for evaluation
+                use_auto_cast = True if args.use_amp else False
+                with autocast(enabled=use_auto_cast):
+                    for t in range(0, T, step):
+                        y = yy[..., t:t + step]
+                        im = model(x, fx=fx)  # B , 4096 , 1
+                        loss += myloss(im.reshape(bsz, -1), y.reshape(bsz, -1))
+                        if t == 0:
+                            pred = im
+                        else:
+                            pred = torch.cat((pred, im), -1)
+                        fx = torch.cat((fx[..., step:], y), dim=-1)  # detach() & groundtruth
 
                 train_l2_step += loss.item()
                 train_l2_full += myloss(pred.reshape(bsz, -1), yy.reshape(bsz, -1)).item()
                 optimizer.zero_grad()
-                loss.backward()
+                scaler.scale(loss).backward()
                 if args.max_grad_norm is not None:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
-                optimizer.step()
+                scaler.step(optimizer)
+                scaler.update()
                 scheduler.step()
 
             test_l2_step = 0
@@ -210,15 +249,19 @@ def main():
                     loss = 0
                     x, fx, yy = x.cuda(), fx.cuda(), yy.cuda()  # x : B, 4096, 2  fx : B, 4096  y : B, 4096, T
                     bsz = x.shape[0]
-                    for t in range(0, T, step):
-                        y = yy[..., t:t + step]
-                        im = model(x, fx=fx)
-                        loss += myloss(im.reshape(bsz, -1), y.reshape(bsz, -1))
-                        if t == 0:
-                            pred = im
-                        else:
-                            pred = torch.cat((pred, im), -1)
-                        fx = torch.cat((fx[..., step:], im), dim=-1)
+                    
+                    # Add autocast for test evaluation to match training
+                    use_auto_cast = True if args.use_amp else False
+                    with autocast(enabled=use_auto_cast):
+                        for t in range(0, T, step):
+                            y = yy[..., t:t + step]
+                            im = model(x, fx=fx)
+                            loss += myloss(im.reshape(bsz, -1), y.reshape(bsz, -1))
+                            if t == 0:
+                                pred = im
+                            else:
+                                pred = torch.cat((pred, im), -1)
+                            fx = torch.cat((fx[..., step:], im), dim=-1)
 
                     test_l2_step += loss.item()
                     test_l2_full += myloss(pred.reshape(bsz, -1), yy.reshape(bsz, -1)).item()
@@ -238,6 +281,9 @@ def main():
             os.makedirs('./checkpoints')
         print('save model')
         torch.save(model.state_dict(), os.path.join('./checkpoints', save_name + '.pt'))
+
+        if args.use_wandb:
+            wandb.finish()
 
 
 if __name__ == "__main__":

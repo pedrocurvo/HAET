@@ -3,9 +3,13 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import wandb
 from tqdm import *
 from utils.testloss import TestLoss
 from model_dict import get_model
+from utils.normalizer import UnitTransformer
+from torch.cuda.amp import autocast, GradScaler
+import time
 
 parser = argparse.ArgumentParser('Training Transformer')
 
@@ -28,7 +32,11 @@ parser.add_argument('--ref', type=int, default=8)
 parser.add_argument('--slice_num', type=int, default=32)
 parser.add_argument('--eval', type=int, default=0)
 parser.add_argument('--save_name', type=str, default='airfoil_Transolver')
-parser.add_argument('--data_path', type=str, default='/data/fno/airfoil/naca')
+parser.add_argument('--data_path', type=str, default='./data/airfoil/naca')
+parser.add_argument('--use_wandb', type=int, default=1, help='Whether to use Weights & Biases logging')
+parser.add_argument('--wandb_project', type=str, default='PDE-Solving', help='W&B project name')
+parser.add_argument('--wandb_entity', type=str, default=None, help='W&B entity name')
+parser.add_argument('--use_amp', type=int, default=1, help='Whether to use Automatic Mixed Precision')
 args = parser.parse_args()
 eval = args.eval
 save_name = args.save_name
@@ -47,6 +55,18 @@ def count_parameters(model):
 
 
 def main():
+    # Initialize wandb if enabled
+    if args.use_wandb:
+        wandb.init(
+            project=args.wandb_project,
+            entity=args.wandb_entity,
+            config=vars(args),
+            name=save_name,
+        )
+    
+    # Initialize gradient scaler for AMP
+    scaler = GradScaler() if args.use_amp else None
+    
     INPUT_X = args.data_path + '/NACA_Cylinder_X.npy'
     INPUT_Y = args.data_path + '/NACA_Cylinder_Y.npy'
     OUTPUT_Sigma = args.data_path + '/NACA_Cylinder_Q.npy'
@@ -78,6 +98,17 @@ def main():
     y_train = y_train.reshape(ntrain, -1)
     y_test = y_test.reshape(ntest, -1)
 
+    # Add normalizers similar to exp_pipe.py
+    x_normalizer = UnitTransformer(x_train)
+    y_normalizer = UnitTransformer(y_train)
+
+    x_train = x_normalizer.encode(x_train)
+    x_test = x_normalizer.encode(x_test)
+    y_train = y_normalizer.encode(y_train)
+
+    x_normalizer.cuda()
+    y_normalizer.cuda()
+
     train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(x_train, x_train, y_train),
                                                batch_size=args.batch_size,
                                                shuffle=True)
@@ -87,7 +118,7 @@ def main():
 
     print("Dataloading is over.")
 
-    model = get_model(args).Model(space_dim=2,
+    model = get_model(args)(space_dim=2,
                                   n_layers=args.n_layers,
                                   n_hidden=args.n_hidden,
                                   dropout=args.dropout,
@@ -100,6 +131,13 @@ def main():
                                   ref=args.ref,
                                   unified_pos=args.unified_pos,
                                   H=s1, W=s2).cuda()
+
+    # compile the model, autotuning for performance
+    model = torch.compile(model, mode="max-autotune")
+    
+    # Add wandb model watching
+    if args.use_wandb and not eval:
+        wandb.watch(model, log_freq=100)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     print(args)
@@ -124,7 +162,12 @@ def main():
             for pos, fx, y in test_loader:
                 id += 1
                 x, fx, y = pos.cuda(), fx.cuda(), y.cuda()
-                out = model(x, None).squeeze(-1)
+
+                # Use AMP for inference if enabled
+                use_auto_cast = True if args.use_amp else False
+                with autocast(enabled=use_auto_cast):
+                    out = model(x, None).squeeze(-1)
+                    out = y_normalizer.decode(out)
 
                 tl = myloss(out, y).item()
                 rel_err += tl
@@ -178,6 +221,10 @@ def main():
 
         rel_err /= ntest
         print("rel_err:{}".format(rel_err))
+
+        # Log evaluation metrics to W&B
+        if args.use_wandb:
+            wandb.log({"test/rel_err": rel_err})
     else:
         for ep in range(args.epochs):
 
@@ -188,13 +235,29 @@ def main():
 
                 x, fx, y = pos.cuda(), fx.cuda(), y.cuda()  # x:B,N,2  fx:B,N,2  y:B,N
                 optimizer.zero_grad()
-                out = model(x, None).squeeze(-1)
-                loss = myloss(out, y)
-                loss.backward()
 
+                # Use AMP for training if enabled
+                use_auto_cast = True if args.use_amp else False
+                with autocast(enabled=use_auto_cast):
+                    out = model(x, None).squeeze(-1)
+                    out = y_normalizer.decode(out)
+                    y = y_normalizer.decode(y)
+                    loss = myloss(out, y)
+
+                # Use scaler for backward pass if AMP is enabled
+                if args.use_amp:
+                    scaler.scale(loss).backward()
+                    if args.max_grad_norm is not None:
+                        scaler.unscale_(optimizer)
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    loss.backward()
                 if args.max_grad_norm is not None:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
                 optimizer.step()
+
                 train_loss += loss.item()
                 scheduler.step()
 
@@ -206,13 +269,27 @@ def main():
             with torch.no_grad():
                 for pos, fx, y in test_loader:
                     x, fx, y = pos.cuda(), fx.cuda(), y.cuda()
-                    out = model(x, None).squeeze(-1)
+
+                    # Use AMP for evaluation if enabled
+                    use_auto_cast = True if args.use_amp else False
+                    with autocast(enabled=use_auto_cast):
+                        out = model(x, None).squeeze(-1)
+                        out = y_normalizer.decode(out)
 
                     tl = myloss(out, y).item()
                     rel_err += tl
 
             rel_err /= ntest
             print("rel_err:{}".format(rel_err))
+
+            # Log metrics to wandb
+            if args.use_wandb:
+                wandb.log({
+                    "train/loss": train_loss,
+                    "test/rel_error": rel_err,
+                    "epoch": ep,
+                    "learning_rate": scheduler.get_last_lr()[0]
+                })
 
             if ep % 100 == 0:
                 if not os.path.exists('./checkpoints'):
@@ -223,8 +300,17 @@ def main():
         if not os.path.exists('./checkpoints'):
             os.makedirs('./checkpoints')
         print('save model')
-        torch.save(model.state_dict(), os.path.join('./checkpoints', save_name + '.pt'))
+        final_checkpoint_path = os.path.join('./checkpoints', save_name + '.pt')
+        torch.save(model.state_dict(), final_checkpoint_path)
+
+        # Save final model to wandb and finish session
+        if args.use_wandb:
+            wandb.save(final_checkpoint_path)
+            wandb.finish()
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     main()
+    end_time = time.time()
+    print("Total time: {:.2f} seconds".format(end_time - start_time))
