@@ -8,7 +8,7 @@ from tqdm import *
 from utils.testloss import TestLoss
 from model_dict import get_model
 from utils.normalizer import UnitTransformer
-from torch.amp import autocast, GradScaler
+from torch.cuda.amp import autocast, GradScaler
 import time
 
 parser = argparse.ArgumentParser('Training Transformer')
@@ -65,7 +65,7 @@ def main():
         )
     
     # Initialize gradient scaler for AMP
-    scaler = GradScaler('cuda') if args.use_amp else None
+    scaler = GradScaler() if args.use_amp else None
     
     INPUT_X = args.data_path + '/Pipe_X.npy'
     INPUT_Y = args.data_path + '/Pipe_Y.npy'
@@ -163,8 +163,13 @@ def main():
             for pos, fx, y in test_loader:
                 id += 1
                 x, fx, y = pos.cuda(), fx.cuda(), y.cuda()
-                out = model(x, None).squeeze(-1)
-                out = y_normalizer.decode(out)
+                
+                # Use AMP for evaluation if enabled
+                use_auto_cast = True if args.use_amp else False
+                with autocast(enabled=use_auto_cast):
+                    out = model(x, None).squeeze(-1)
+                    out = y_normalizer.decode(out)
+                    # NOTE: Removed decoding here, as test data was never encoded
 
                 tl = myloss(out, y).item()
                 rel_err += tl
@@ -268,7 +273,7 @@ def main():
                     x, fx, y = pos.cuda(), fx.cuda(), y.cuda()
                     # Use AMP for evaluation if enabled
                     use_auto_cast = True if args.use_amp else False
-                    with autocast('cuda', enabled=use_auto_cast):
+                    with autocast(enabled=use_auto_cast):
                         out = model(x, None).squeeze(-1)
                         out = y_normalizer.decode(out)
 

@@ -153,20 +153,21 @@ def main():
         with torch.no_grad():
             for x, fx, yy in test_loader:
                 id += 1
-                x, fx, yy = x.cuda(), fx.cuda(), yy.cuda()  # x : B, 4096, 2  fx : B, 4096  y : B, 4096, T
+                x, fx, fx_orig = x.cuda(), fx.cuda(), fx.cuda().clone()  # Clone the input tensor as well
+                yy = yy.cuda()
                 bsz = x.shape[0]
                 
                 # Use AMP for inference if enabled
                 use_auto_cast = True if args.use_amp else False
                 with autocast(enabled=use_auto_cast):
                     for t in range(0, T, step):
-                        im = model(x, fx=fx)
+                        im = model(x, fx=fx).clone()  # Clone the output tensor to prevent CUDA graph issues
 
                         fx = torch.cat((fx[..., step:], im), dim=-1)
                         if t == 0:
                             pred = im
                         else:
-                            pred = torch.cat((pred, im), -1)
+                            pred = torch.cat((pred.clone(), im), -1)  # Clone pred before concatenation
 
                 if id < showcase:
                     print(id)
@@ -213,7 +214,7 @@ def main():
 
             for x, fx, yy in train_loader:
                 loss = 0
-                x, fx, yy = x.cuda(), fx.cuda(), yy.cuda()  # x: B,4096,2    fx: B,4096,T   y: B,4096,T
+                x, fx, yy = x.cuda(), fx.cuda(), yy.cuda()
                 bsz = x.shape[0]
                 
                 # Use AMP for evaluation
@@ -221,13 +222,13 @@ def main():
                 with autocast(enabled=use_auto_cast):
                     for t in range(0, T, step):
                         y = yy[..., t:t + step]
-                        im = model(x, fx=fx)  # B , 4096 , 1
+                        im = model(x, fx=fx).clone()  # Clone model output
                         loss += myloss(im.reshape(bsz, -1), y.reshape(bsz, -1))
                         if t == 0:
                             pred = im
                         else:
-                            pred = torch.cat((pred, im), -1)
-                        fx = torch.cat((fx[..., step:], y), dim=-1)  # detach() & groundtruth
+                            pred = torch.cat((pred.clone(), im), -1)  # Clone pred before concatenation
+                        fx = torch.cat((fx[..., step:], y), dim=-1)  # Use groundtruth for training
 
                 train_l2_step += loss.item()
                 train_l2_full += myloss(pred.reshape(bsz, -1), yy.reshape(bsz, -1)).item()
@@ -247,7 +248,7 @@ def main():
             with torch.no_grad():
                 for x, fx, yy in test_loader:
                     loss = 0
-                    x, fx, yy = x.cuda(), fx.cuda(), yy.cuda()  # x : B, 4096, 2  fx : B, 4096  y : B, 4096, T
+                    x, fx, yy = x.cuda(), fx.cuda(), yy.cuda()
                     bsz = x.shape[0]
                     
                     # Add autocast for test evaluation to match training
@@ -255,12 +256,12 @@ def main():
                     with autocast(enabled=use_auto_cast):
                         for t in range(0, T, step):
                             y = yy[..., t:t + step]
-                            im = model(x, fx=fx)
+                            im = model(x, fx=fx).clone()  # Clone model output
                             loss += myloss(im.reshape(bsz, -1), y.reshape(bsz, -1))
                             if t == 0:
                                 pred = im
                             else:
-                                pred = torch.cat((pred, im), -1)
+                                pred = torch.cat((pred.clone(), im), -1)  # Clone pred before concatenation
                             fx = torch.cat((fx[..., step:], im), dim=-1)
 
                     test_l2_step += loss.item()
