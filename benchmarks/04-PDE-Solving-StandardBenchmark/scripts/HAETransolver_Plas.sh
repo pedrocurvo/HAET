@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=20:00:00
-#SBATCH --output=slurm_output/slurm_output_plasticity_%A.out
+#SBATCH --output=slurm_output/slurm_output_plasticity_training_%A.out
 
 module purge
 module load 2024

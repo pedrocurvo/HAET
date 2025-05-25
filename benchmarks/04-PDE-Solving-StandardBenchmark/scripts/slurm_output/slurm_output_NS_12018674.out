@@ -787,3 +787,137 @@ SingleProcess AUTOTUNE benchmarking takes 2.2565 seconds and 0.0009 seconds prec
   warnings.warn(
 /gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_ns.py:222: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
   with autocast(enabled=use_auto_cast):
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_ns.py:222: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_auto_cast):
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_ns.py:222: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_auto_cast):
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_ns.py:256: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_auto_cast):
+AUTOTUNE mm(8192x74, 74x512)
+  triton_mm_2241 0.0195 ms 100.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=16, BLOCK_M=64, BLOCK_N=64, B_PROLOGUE_CAST_TYPE=None, EVEN_K=False, GROUP_M=8, num_stages=2, num_warps=4
+  triton_mm_2245 0.0195 ms 100.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=128, B_PROLOGUE_CAST_TYPE=None, EVEN_K=False, GROUP_M=8, num_stages=3, num_warps=4
+  triton_mm_2249 0.0195 ms 100.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=128, BLOCK_N=64, B_PROLOGUE_CAST_TYPE=None, EVEN_K=False, GROUP_M=8, num_stages=3, num_warps=4
+  triton_mm_2244 0.0205 ms 95.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=128, BLOCK_M=64, BLOCK_N=64, B_PROLOGUE_CAST_TYPE=None, EVEN_K=False, GROUP_M=8, num_stages=5, num_warps=4
+  triton_mm_2248 0.0205 ms 95.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=128, BLOCK_M=64, BLOCK_N=128, B_PROLOGUE_CAST_TYPE=None, EVEN_K=False, GROUP_M=8, num_stages=4, num_warps=4
+  triton_mm_2251 0.0215 ms 90.5% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=128, BLOCK_N=128, B_PROLOGUE_CAST_TYPE=None, EVEN_K=False, GROUP_M=8, num_stages=2, num_warps=8
+  triton_mm_2242 0.0225 ms 86.4% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=64, B_PROLOGUE_CAST_TYPE=None, EVEN_K=False, GROUP_M=8, num_stages=2, num_warps=4
+  triton_mm_2246 0.0225 ms 86.4% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=128, B_PROLOGUE_CAST_TYPE=None, EVEN_K=False, GROUP_M=8, num_stages=4, num_warps=8
+  triton_mm_2250 0.0225 ms 86.4% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=128, BLOCK_N=64, B_PROLOGUE_CAST_TYPE=None, EVEN_K=False, GROUP_M=8, num_stages=4, num_warps=8
+  triton_mm_2247 0.0246 ms 79.2% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=64, BLOCK_M=64, BLOCK_N=128, B_PROLOGUE_CAST_TYPE=None, EVEN_K=False, GROUP_M=8, num_stages=3, num_warps=4
+SingleProcess AUTOTUNE benchmarking takes 2.1310 seconds and 0.3240 seconds precompiling
+AUTOTUNE mm(65536x32, 32x32)
+  triton_mm_2282 0.0123 ms 100.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=32, BLOCK_N=32, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=2, num_warps=4
+  triton_mm_2283 0.0123 ms 100.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=32, BLOCK_N=32, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=5, num_warps=4
+  triton_mm_2284 0.0123 ms 100.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=32, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=5, num_warps=8
+  triton_mm_2281 0.0133 ms 92.3% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=16, BLOCK_M=32, BLOCK_N=32, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=1, num_warps=2
+  triton_mm_2285 0.0133 ms 92.3% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=32, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=5, num_warps=4
+  triton_mm_2286 0.0133 ms 92.3% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=16, BLOCK_M=64, BLOCK_N=32, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=2, num_warps=4
+  triton_mm_2287 0.0133 ms 92.3% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=32, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=2, num_warps=4
+  triton_mm_2288 0.0133 ms 92.3% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=32, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=3, num_warps=8
+  triton_mm_2289 0.0133 ms 92.3% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=32, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=3, num_warps=4
+  triton_mm_2290 0.0133 ms 92.3% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=32, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=4, num_warps=8
+SingleProcess AUTOTUNE benchmarking takes 1.6860 seconds and 0.0010 seconds precompiling
+AUTOTUNE mm(65536x32, 32x1)
+  triton_mm_2299 0.0113 ms 100.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=16, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=5, num_warps=4
+  triton_mm_2301 0.0113 ms 100.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=16, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=2, num_warps=4
+  triton_mm_2302 0.0113 ms 100.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=16, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=3, num_warps=4
+  triton_mm_2305 0.0113 ms 100.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=128, BLOCK_N=16, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=4, num_warps=8
+  triton_mm_2307 0.0113 ms 100.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=128, BLOCK_N=16, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=5, num_warps=8
+  triton_mm_2296 0.0123 ms 91.7% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=16, BLOCK_M=32, BLOCK_N=16, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=1, num_warps=2
+  triton_mm_2297 0.0123 ms 91.7% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=32, BLOCK_N=16, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=2, num_warps=2
+  triton_mm_2298 0.0123 ms 91.7% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=32, BLOCK_N=16, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=5, num_warps=2
+  triton_mm_2303 0.0123 ms 91.7% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=16, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=4, num_warps=4
+  triton_mm_2304 0.0123 ms 91.7% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=128, BLOCK_N=16, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=3, num_warps=4
+SingleProcess AUTOTUNE benchmarking takes 1.3709 seconds and 0.0005 seconds precompiling
+AUTOTUNE bmm(2x4096x256, 2x256x256)
+  triton_bmm_2959 0.0154 ms 100.0% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=128, BLOCK_N=64, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=3, num_warps=4
+  triton_bmm_2955 0.0164 ms 93.7% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=128, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=3, num_warps=4
+  triton_bmm_2952 0.0174 ms 88.2% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=64, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=2, num_warps=4
+  triton_bmm_2957 0.0174 ms 88.2% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=64, BLOCK_M=64, BLOCK_N=128, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=3, num_warps=4
+  triton_bmm_2960 0.0174 ms 88.2% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=128, BLOCK_N=64, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=4, num_warps=8
+  triton_bmm_2962 0.0174 ms 88.2% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=128, BLOCK_N=128, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=3, num_warps=4
+  triton_bmm_2956 0.0184 ms 83.3% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=32, BLOCK_M=64, BLOCK_N=128, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=4, num_warps=8
+  triton_bmm_2963 0.0184 ms 83.3% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=64, BLOCK_M=128, BLOCK_N=128, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=3, num_warps=4
+  bmm 0.0195 ms 78.9% 
+  triton_bmm_2953 0.0195 ms 78.9% ACC_TYPE='tl.float32', ALLOW_TF32=False, BLOCK_K=64, BLOCK_M=64, BLOCK_N=64, B_PROLOGUE_CAST_TYPE=None, EVEN_K=True, GROUP_M=8, num_stages=3, num_warps=8
+SingleProcess AUTOTUNE benchmarking takes 2.1296 seconds and 1.0000 seconds precompiling
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_ns.py:256: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_auto_cast):
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_ns.py:222: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_auto_cast):
+)
+Total Trainable Params: 7272457
+Epoch 0 , train_step_loss:0.32391 , train_full_loss:0.38573 , test_step_loss:0.56563 , test_full_loss:0.64519
+save model
+Epoch 1 , train_step_loss:0.23848 , train_full_loss:0.28377 , test_step_loss:0.58846 , test_full_loss:0.70328
+Epoch 2 , train_step_loss:0.20222 , train_full_loss:0.24172 , test_step_loss:0.51189 , test_full_loss:0.61850
+Epoch 3 , train_step_loss:0.18372 , train_full_loss:0.22008 , test_step_loss:0.49367 , test_full_loss:0.59068
+Epoch 4 , train_step_loss:0.16822 , train_full_loss:0.20274 , test_step_loss:0.43169 , test_full_loss:0.50840
+Epoch 5 , train_step_loss:0.15981 , train_full_loss:0.19288 , test_step_loss:0.45398 , test_full_loss:0.53639
+Epoch 6 , train_step_loss:0.15319 , train_full_loss:0.18492 , test_step_loss:0.42894 , test_full_loss:0.51669
+Epoch 7 , train_step_loss:0.14624 , train_full_loss:0.17730 , test_step_loss:0.40715 , test_full_loss:0.48653
+Epoch 8 , train_step_loss:0.14268 , train_full_loss:0.17296 , test_step_loss:0.43757 , test_full_loss:0.52419
+Epoch 9 , train_step_loss:0.13899 , train_full_loss:0.16858 , test_step_loss:0.40658 , test_full_loss:0.49521
+Epoch 10 , train_step_loss:0.13421 , train_full_loss:0.16322 , test_step_loss:0.39740 , test_full_loss:0.47622
+Epoch 11 , train_step_loss:0.13278 , train_full_loss:0.16115 , test_step_loss:0.45470 , test_full_loss:0.54728
+Epoch 12 , train_step_loss:0.12982 , train_full_loss:0.15783 , test_step_loss:0.37405 , test_full_loss:0.45160
+Epoch 13 , train_step_loss:0.12628 , train_full_loss:0.15373 , test_step_loss:0.37292 , test_full_loss:0.45381
+Epoch 14 , train_step_loss:0.12449 , train_full_loss:0.15125 , test_step_loss:0.40132 , test_full_loss:0.48379
+Epoch 15 , train_step_loss:0.12234 , train_full_loss:0.14895 , test_step_loss:0.39753 , test_full_loss:0.47748
+Epoch 16 , train_step_loss:0.12114 , train_full_loss:0.14740 , test_step_loss:0.35872 , test_full_loss:0.43083
+Epoch 17 , train_step_loss:0.11955 , train_full_loss:0.14522 , test_step_loss:0.42266 , test_full_loss:0.51311
+Epoch 18 , train_step_loss:0.11760 , train_full_loss:0.14292 , test_step_loss:0.37108 , test_full_loss:0.45121
+Epoch 19 , train_step_loss:0.11651 , train_full_loss:0.14157 , test_step_loss:0.36898 , test_full_loss:0.45141
+Epoch 20 , train_step_loss:0.11511 , train_full_loss:0.13974 , test_step_loss:0.39761 , test_full_loss:0.48094
+Epoch 21 , train_step_loss:0.11324 , train_full_loss:0.13775 , test_step_loss:0.36032 , test_full_loss:0.43122
+Epoch 22 , train_step_loss:0.11216 , train_full_loss:0.13640 , test_step_loss:0.34441 , test_full_loss:0.42410
+Epoch 23 , train_step_loss:0.11044 , train_full_loss:0.13443 , test_step_loss:0.41694 , test_full_loss:0.52001
+Epoch 24 , train_step_loss:0.11099 , train_full_loss:0.13406 , test_step_loss:0.40083 , test_full_loss:0.48791
+Epoch 25 , train_step_loss:0.10816 , train_full_loss:0.13114 , test_step_loss:0.38205 , test_full_loss:0.46982
+Epoch 26 , train_step_loss:0.10699 , train_full_loss:0.12970 , test_step_loss:0.38863 , test_full_loss:0.48170
+Epoch 27 , train_step_loss:0.10594 , train_full_loss:0.12825 , test_step_loss:0.36562 , test_full_loss:0.43923
+Epoch 28 , train_step_loss:0.10678 , train_full_loss:0.12902 , test_step_loss:0.36989 , test_full_loss:0.44640
+Epoch 29 , train_step_loss:0.10466 , train_full_loss:0.12662 , test_step_loss:0.33631 , test_full_loss:0.41476
+Epoch 30 , train_step_loss:0.10490 , train_full_loss:0.12665 , test_step_loss:0.34695 , test_full_loss:0.42572
+Epoch 31 , train_step_loss:0.10231 , train_full_loss:0.12389 , test_step_loss:0.35102 , test_full_loss:0.43164
+Epoch 32 , train_step_loss:0.10114 , train_full_loss:0.12224 , test_step_loss:0.32705 , test_full_loss:0.39721
+Epoch 33 , train_step_loss:0.10153 , train_full_loss:0.12227 , test_step_loss:0.32109 , test_full_loss:0.39002
+Epoch 34 , train_step_loss:0.09926 , train_full_loss:0.12005 , test_step_loss:0.29603 , test_full_loss:0.36539
+Epoch 35 , train_step_loss:0.09885 , train_full_loss:0.11948 , test_step_loss:0.39423 , test_full_loss:0.47431
+Epoch 36 , train_step_loss:0.09876 , train_full_loss:0.11877 , test_step_loss:0.38259 , test_full_loss:0.45719
+Epoch 37 , train_step_loss:0.09643 , train_full_loss:0.11643 , test_step_loss:0.32727 , test_full_loss:0.39588
+Epoch 38 , train_step_loss:0.09533 , train_full_loss:0.11536 , test_step_loss:0.38810 , test_full_loss:0.47088
+Epoch 39 , train_step_loss:0.09662 , train_full_loss:0.11622 , test_step_loss:0.32952 , test_full_loss:0.41524
+Epoch 40 , train_step_loss:0.09315 , train_full_loss:0.11311 , test_step_loss:0.36062 , test_full_loss:0.43503
+Epoch 41 , train_step_loss:0.09328 , train_full_loss:0.11254 , test_step_loss:0.33214 , test_full_loss:0.41277
+Epoch 42 , train_step_loss:0.09281 , train_full_loss:0.11199 , test_step_loss:0.31588 , test_full_loss:0.38654
+Epoch 43 , train_step_loss:0.09299 , train_full_loss:0.11193 , test_step_loss:0.39970 , test_full_loss:0.48505
+Epoch 44 , train_step_loss:0.09062 , train_full_loss:0.10959 , test_step_loss:0.33190 , test_full_loss:0.40435
+Epoch 45 , train_step_loss:0.08896 , train_full_loss:0.10769 , test_step_loss:0.30069 , test_full_loss:0.36787
+Epoch 46 , train_step_loss:0.08800 , train_full_loss:0.10631 , test_step_loss:0.31447 , test_full_loss:0.38568
+Epoch 47 , train_step_loss:0.08663 , train_full_loss:0.10475 , test_step_loss:0.29628 , test_full_loss:0.36140
+Epoch 48 , train_step_loss:0.08448 , train_full_loss:0.10283 , test_step_loss:0.31261 , test_full_loss:0.38958
+Epoch 49 , train_step_loss:0.08580 , train_full_loss:0.10358 , test_step_loss:0.29377 , test_full_loss:0.36102
+Epoch 50 , train_step_loss:0.08445 , train_full_loss:0.10216 , test_step_loss:0.27925 , test_full_loss:0.34857
+Epoch 51 , train_step_loss:0.08306 , train_full_loss:0.10034 , test_step_loss:0.30757 , test_full_loss:0.38593
+Epoch 52 , train_step_loss:0.08295 , train_full_loss:0.10044 , test_step_loss:0.30141 , test_full_loss:0.36675
+Epoch 53 , train_step_loss:0.08178 , train_full_loss:0.09886 , test_step_loss:0.26892 , test_full_loss:0.33792
+Epoch 54 , train_step_loss:0.08103 , train_full_loss:0.09790 , test_step_loss:0.33643 , test_full_loss:0.41736
+Epoch 55 , train_step_loss:0.07953 , train_full_loss:0.09647 , test_step_loss:0.34878 , test_full_loss:0.43831
+Epoch 56 , train_step_loss:0.07897 , train_full_loss:0.09582 , test_step_loss:0.25527 , test_full_loss:0.32073
+Epoch 57 , train_step_loss:0.07913 , train_full_loss:0.09573 , test_step_loss:0.27873 , test_full_loss:0.34684
+Epoch 58 , train_step_loss:0.07835 , train_full_loss:0.09459 , test_step_loss:0.30611 , test_full_loss:0.37127
+Epoch 59 , train_step_loss:0.07672 , train_full_loss:0.09332 , test_step_loss:0.28418 , test_full_loss:0.34853
+Epoch 60 , train_step_loss:0.07775 , train_full_loss:0.09354 , test_step_loss:0.34089 , test_full_loss:0.42945
+Epoch 61 , train_step_loss:0.07674 , train_full_loss:0.09268 , test_step_loss:0.26117 , test_full_loss:0.31867
+Epoch 62 , train_step_loss:0.07614 , train_full_loss:0.09188 , test_step_loss:0.29223 , test_full_loss:0.36575
+Epoch 63 , train_step_loss:0.07413 , train_full_loss:0.08944 , test_step_loss:0.28178 , test_full_loss:0.35731
+Epoch 64 , train_step_loss:0.07315 , train_full_loss:0.08882 , test_step_loss:0.28527 , test_full_loss:0.35328
+Epoch 65 , train_step_loss:0.07308 , train_full_loss:0.08878 , test_step_loss:0.26168 , test_full_loss:0.33152
+Epoch 66 , train_step_loss:0.07160 , train_full_loss:0.08703 , test_step_loss:0.29892 , test_full_loss:0.36991
+Epoch 67 , train_step_loss:0.07199 , train_full_loss:0.08712 , test_step_loss:0.29302 , test_full_loss:0.36141
+Epoch 68 , train_step_loss:0.07175 , train_full_loss:0.08691 , test_step_loss:0.25540 , test_full_loss:0.32193
+Epoch 69 , train_step_loss:0.07027 , train_full_loss:0.08533 , test_step_loss:0.25903 , test_full_loss:0.32912
+Epoch 70 , train_step_loss:0.07085 , train_full_loss:0.08589 , test_step_loss:0.27067 , test_full_loss:0.34037
+Epoch 71 , train_step_loss:0.07056 , train_full_loss:0.08548 , test_step_loss:0.27881 , test_full_loss:0.34626
+Epoch 72 , train_step_loss:0.06980 , train_full_loss:0.08416 , test_step_loss:0.23446 , test_full_loss:0.29246

@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=20:00:00
-#SBATCH --output=slurm_output/slurm_output_airfoil_eval_%A.out
+#SBATCH --output=slurm_output/slurm_output_airfoil_training_64_%A.out
 
 module purge
 module load 2024
@@ -43,7 +43,7 @@ srun python exp_airfoil.py \
     --slice_num 64 \
     --unified_pos 0 \
     --ref 8 \
-    --eval 1 \
+    --eval 0 \
     --save_name airfoil_HAETransolver
 
 echo "Experiment completed. Check the output files for results."

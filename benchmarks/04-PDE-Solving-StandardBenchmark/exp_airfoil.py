@@ -8,7 +8,8 @@ from tqdm import *
 from utils.testloss import TestLoss
 from model_dict import get_model
 from utils.normalizer import UnitTransformer
-from torch.cuda.amp import autocast, GradScaler
+# Replace deprecated imports
+from torch.amp import autocast, GradScaler
 import time
 
 parser = argparse.ArgumentParser('Training Transformer')
@@ -64,8 +65,8 @@ def main():
             name=save_name,
         )
     
-    # Initialize gradient scaler for AMP
-    scaler = GradScaler() if args.use_amp else None
+    # Initialize gradient scaler for AMP with correct API
+    scaler = GradScaler('cuda') if args.use_amp else None
     
     INPUT_X = args.data_path + '/NACA_Cylinder_X.npy'
     INPUT_Y = args.data_path + '/NACA_Cylinder_Y.npy'
@@ -165,7 +166,7 @@ def main():
 
                 # Use AMP for inference if enabled
                 use_auto_cast = True if args.use_amp else False
-                with autocast(enabled=use_auto_cast):
+                with autocast('cuda', enabled=use_auto_cast):
                     out = model(x, None).squeeze(-1)
                     out = y_normalizer.decode(out)
 
@@ -238,7 +239,7 @@ def main():
 
                 # Use AMP for training if enabled
                 use_auto_cast = True if args.use_amp else False
-                with autocast(enabled=use_auto_cast):
+                with autocast('cuda', enabled=use_auto_cast):
                     out = model(x, None).squeeze(-1)
                     out = y_normalizer.decode(out)
                     y = y_normalizer.decode(y)
@@ -272,7 +273,7 @@ def main():
 
                     # Use AMP for evaluation if enabled
                     use_auto_cast = True if args.use_amp else False
-                    with autocast(enabled=use_auto_cast):
+                    with autocast('cuda', enabled=use_auto_cast):
                         out = model(x, None).squeeze(-1)
                         out = y_normalizer.decode(out)
 
