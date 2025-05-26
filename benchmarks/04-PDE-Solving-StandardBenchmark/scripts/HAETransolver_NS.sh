@@ -42,7 +42,7 @@ srun python exp_ns.py \
     --slice_num 32 \
     --unified_pos 1 \
     --ref 8 \
-    --eval 0 \
+    --eval 1 \
     --save_name ns_HAETransolver
 
 echo "Experiment completed. Check the output files for results."

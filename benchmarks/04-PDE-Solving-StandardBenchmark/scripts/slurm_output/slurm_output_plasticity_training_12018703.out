@@ -814,3 +814,34 @@ SingleProcess AUTOTUNE benchmarking takes 1.9540 seconds and 0.0007 seconds prec
   with autocast(enabled=use_auto_cast):
 /gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_plas.py:267: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
   with autocast(enabled=use_auto_cast):
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_plas.py:267: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_auto_cast):
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_plas.py:267: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_auto_cast):
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_plas.py:267: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_auto_cast):
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_plas.py:267: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_auto_cast):
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_plas.py:267: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_auto_cast):
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_plas.py:267: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_auto_cast):
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_plas.py:267: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_auto_cast):
+slurmstepd: error: *** JOB 12018703 ON gcn29 CANCELLED AT 2025-05-26T05:51:19 DUE TO TIME LIMIT ***
+slurmstepd: error: *** STEP 12018703.0 ON gcn29 CANCELLED AT 2025-05-26T05:51:19 DUE TO TIME LIMIT ***
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+
+JOB STATISTICS
+==============
+Job ID: 12018703
+Cluster: snellius
+User/Group: scur1405/scur1405
+State: TIMEOUT (exit code 0)
+Nodes: 1
+Cores per node: 18
+CPU Utilized: 21:03:05
+CPU Efficiency: 5.85% of 15-00:08:06 core-walltime
+Job Wall-clock time: 20:00:27
+Memory Utilized: 25.69 GB
+Memory Efficiency: 21.41% of 120.00 GB (120.00 GB/node)
