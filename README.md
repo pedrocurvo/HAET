@@ -12,6 +12,10 @@
 
 </div>
 
+<div align="center">
+<img src="docs/images/Erwintransolver-architecture-1.png" alt="HAET Architecture" width="600">
+</div>
+
 ## Introduction
 
 HAET (Hierarchical Attention Erwin Transolver) is a hybrid architecture designed to process mesh-based physical systems at industrial scale by merging the strengths of two state-of-the-art methods: [Transolver](https://github.com/thuml/Transolver) and [Erwin](https://github.com/maxxxzdn/erwin).
