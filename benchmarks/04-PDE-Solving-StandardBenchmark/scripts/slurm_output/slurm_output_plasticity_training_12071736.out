@@ -1,0 +1,240 @@
+============================================================================================== 
+Warning! Mixing Conda and module environments may lead to corruption of the
+user environment. 
+We do not recommend users mixing those two environments unless absolutely
+necessary. Note that 
+SURF does not provide any support for Conda environment.
+For more information, please refer to our software policy page:
+https://servicedesk.surf.nl/wiki/display/WIKI/Software+policy+Snellius#SoftwarepolicySnellius-UseofAnacondaandMinicondaenvironmentsonSnellius 
+
+Remember that many packages have already been installed on the system and can
+be loaded using 
+the 'module load <package__name>' command. If you are uncertain if a package is
+already available 
+on the system, please use 'module avail' or 'module spider' to search for it.
+============================================================================================== 
+Running experiment on Plasticity dataset
+/home/scur1405/.local/lib/python3.12/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+wandb: Currently logged in as: salvatorpes (salvatorpes-university-of-amsterdam) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+/sw/arch/RHEL9/EB_production/2024/software/Anaconda3/2024.06-1/lib/python3.12/site-packages/pydantic/main.py:308: UserWarning: Pydantic serializer warnings:
+  Expected `list[str]` but got `tuple` - serialized value may not be as expected
+  Expected `list[str]` but got `tuple` - serialized value may not be as expected
+  return self.__pydantic_serializer__.to_python(
+/sw/arch/RHEL9/EB_production/2024/software/Anaconda3/2024.06-1/lib/python3.12/site-packages/pydantic/main.py:308: UserWarning: Pydantic serializer warnings:
+  Expected `list[str]` but got `tuple` - serialized value may not be as expected
+  Expected `list[str]` but got `tuple` - serialized value may not be as expected
+  return self.__pydantic_serializer__.to_python(
+wandb: Tracking run with wandb version 0.19.11
+wandb: Run data is saved locally in /gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/wandb/run-20250529_121854-t2xyi2yn
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run plas_HAETransolver
+wandb: ⭐️ View project at https://wandb.ai/salvatorpes-university-of-amsterdam/PDE-Solving
+wandb: 🚀 View run at https://wandb.ai/salvatorpes-university-of-amsterdam/PDE-Solving/runs/t2xyi2yn
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_plas.py:105: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = GradScaler() if args.use_amp else None
+torch.Size([987, 101]) torch.Size([987, 101, 31, 4, 20])
+torch.Size([900, 3131, 1]) torch.Size([900, 3131, 4, 20])
+Dataloading is over.
+Dataloading is over.
+Namespace(lr=0.001, epochs=500, weight_decay=1e-05, model='HAETransolver_Structured_Mesh_2D', n_hidden=128, n_layers=8, n_heads=8, batch_size=8, gpu='0', max_grad_norm=0.1, downsamplex=1, downsampley=1, mlp_ratio=1, dropout=0.0, unified_pos=0, ref=8, slice_num=64, eval=0, save_name='plas_HAETransolver', data_path='./data/plasticity/plas_N987_T20.mat', use_wandb=1, wandb_project='PDE-Solving', wandb_entity=None, use_amp=1)
+OptimizedModule(
+  (_orig_mod): Model(
+    (preprocess): MLP(
+      (linear_pre): Sequential(
+        (0): Linear(in_features=3, out_features=256, bias=True)
+        (1): GELU(approximate='none')
+      )
+      (linear_post): Linear(in_features=256, out_features=128, bias=True)
+      (linears): ModuleList()
+    )
+    (time_fc): Sequential(
+      (0): Linear(in_features=128, out_features=128, bias=True)
+      (1): SiLU()
+      (2): Linear(in_features=128, out_features=128, bias=True)
+    )
+    (blocks): ModuleList(
+      (0-6): 7 x TransolverErwinBlock(
+        (ln_1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        (Attn): Physics_Attention_Structured_Mesh_2D(
+          (in_project_x): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+          (in_project_slice): Linear(in_features=16, out_features=64, bias=True)
+          (ada_temp_linear): Linear(in_features=16, out_features=1, bias=True)
+          (erwin): ErwinTransformer(
+            (encoder): ModuleList(
+              (0): BasicLayer(
+                (blocks): ModuleList(
+                  (0-1): 2 x ErwinTransformerBlock(
+                    (norm1): RMSNorm((16,), eps=None, elementwise_affine=True)
+                    (norm2): RMSNorm((16,), eps=None, elementwise_affine=True)
+                    (BMSA): BallMSA(
+                      (qkv): Linear(in_features=16, out_features=48, bias=True)
+                      (proj): Linear(in_features=16, out_features=16, bias=True)
+                      (pe_proj): Linear(in_features=2, out_features=16, bias=True)
+                    )
+                    (swiglu): SwiGLU(
+                      (w1): Linear(in_features=16, out_features=16, bias=True)
+                      (w2): Linear(in_features=16, out_features=16, bias=True)
+                      (w3): Linear(in_features=16, out_features=16, bias=True)
+                    )
+                  )
+                )
+                (pool): BallPooling(
+                  (proj): Linear(in_features=36, out_features=32, bias=True)
+                  (norm): BatchNorm1d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                )
+              )
+            )
+            (bottleneck): BasicLayer(
+              (blocks): ModuleList(
+                (0-1): 2 x ErwinTransformerBlock(
+                  (norm1): RMSNorm((32,), eps=None, elementwise_affine=True)
+                  (norm2): RMSNorm((32,), eps=None, elementwise_affine=True)
+                  (BMSA): BallMSA(
+                    (qkv): Linear(in_features=32, out_features=96, bias=True)
+                    (proj): Linear(in_features=32, out_features=32, bias=True)
+                    (pe_proj): Linear(in_features=2, out_features=32, bias=True)
+                  )
+                  (swiglu): SwiGLU(
+                    (w1): Linear(in_features=32, out_features=32, bias=True)
+                    (w2): Linear(in_features=32, out_features=32, bias=True)
+                    (w3): Linear(in_features=32, out_features=32, bias=True)
+                  )
+                )
+              )
+            )
+            (decoder): ModuleList(
+              (0): BasicLayer(
+                (blocks): ModuleList(
+                  (0-1): 2 x ErwinTransformerBlock(
+                    (norm1): RMSNorm((16,), eps=None, elementwise_affine=True)
+                    (norm2): RMSNorm((16,), eps=None, elementwise_affine=True)
+                    (BMSA): BallMSA(
+                      (qkv): Linear(in_features=16, out_features=48, bias=True)
+                      (proj): Linear(in_features=16, out_features=16, bias=True)
+                      (pe_proj): Linear(in_features=2, out_features=16, bias=True)
+                    )
+                    (swiglu): SwiGLU(
+                      (w1): Linear(in_features=16, out_features=16, bias=True)
+                      (w2): Linear(in_features=16, out_features=16, bias=True)
+                      (w3): Linear(in_features=16, out_features=16, bias=True)
+                    )
+                  )
+                )
+                (unpool): BallUnpooling(
+                  (proj): Linear(in_features=36, out_features=32, bias=True)
+                  (norm): BatchNorm1d(16, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                )
+              )
+            )
+          )
+          (to_out): Sequential(
+            (0): Linear(in_features=128, out_features=128, bias=True)
+            (1): Dropout(p=0.0, inplace=False)
+          )
+        )
+        (ln_2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        (mlp): MLP(
+          (linear_pre): Sequential(
+            (0): Linear(in_features=128, out_features=128, bias=True)
+            (1): GELU(approximate='none')
+          )
+          (linear_post): Linear(in_features=128, out_features=128, bias=True)
+          (linears): ModuleList()
+        )
+      )
+      (7): TransolverErwinBlock(
+        (ln_1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        (Attn): Physics_Attention_Structured_Mesh_2D(
+          (in_project_x): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+          (in_project_slice): Linear(in_features=16, out_features=64, bias=True)
+          (ada_temp_linear): Linear(in_features=16, out_features=1, bias=True)
+          (erwin): ErwinTransformer(
+            (encoder): ModuleList(
+              (0): BasicLayer(
+                (blocks): ModuleList(
+                  (0-1): 2 x ErwinTransformerBlock(
+                    (norm1): RMSNorm((16,), eps=None, elementwise_affine=True)
+                    (norm2): RMSNorm((16,), eps=None, elementwise_affine=True)
+                    (BMSA): BallMSA(
+                      (qkv): Linear(in_features=16, out_features=48, bias=True)
+                      (proj): Linear(in_features=16, out_features=16, bias=True)
+                      (pe_proj): Linear(in_features=2, out_features=16, bias=True)
+                    )
+                    (swiglu): SwiGLU(
+                      (w1): Linear(in_features=16, out_features=16, bias=True)
+                      (w2): Linear(in_features=16, out_features=16, bias=True)
+                      (w3): Linear(in_features=16, out_features=16, bias=True)
+                    )
+                  )
+                )
+                (pool): BallPooling(
+                  (proj): Linear(in_features=36, out_features=32, bias=True)
+                  (norm): BatchNorm1d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                )
+              )
+            )
+            (bottleneck): BasicLayer(
+              (blocks): ModuleList(
+                (0-1): 2 x ErwinTransformerBlock(
+                  (norm1): RMSNorm((32,), eps=None, elementwise_affine=True)
+                  (norm2): RMSNorm((32,), eps=None, elementwise_affine=True)
+                  (BMSA): BallMSA(
+                    (qkv): Linear(in_features=32, out_features=96, bias=True)
+                    (proj): Linear(in_features=32, out_features=32, bias=True)
+                    (pe_proj): Linear(in_features=2, out_features=32, bias=True)
+                  )
+                  (swiglu): SwiGLU(
+                    (w1): Linear(in_features=32, out_features=32, bias=True)
+                    (w2): Linear(in_features=32, out_features=32, bias=True)
+                    (w3): Linear(in_features=32, out_features=32, bias=True)
+                  )
+                )
+              )
+            )
+            (decoder): ModuleList(
+              (0): BasicLayer(
+                (blocks): ModuleList(
+                  (0-1): 2 x ErwinTransformerBlock(
+                    (norm1): RMSNorm((16,), eps=None, elementwise_affine=True)
+                    (norm2): RMSNorm((16,), eps=None, elementwise_affine=True)
+                    (BMSA): BallMSA(
+                      (qkv): Linear(in_features=16, out_features=48, bias=True)
+                      (proj): Linear(in_features=16, out_features=16, bias=True)
+                      (pe_proj): Linear(in_features=2, out_features=16, bias=True)
+                    )
+                    (swiglu): SwiGLU(
+                      (w1): Linear(in_features=16, out_features=16, bias=True)
+                      (w2): Linear(in_features=16, out_features=16, bias=True)
+                      (w3): Linear(in_features=16, out_features=16, bias=True)
+                    )
+                  )
+                )
+                (unpool): BallUnpooling(
+                  (proj): Linear(in_features=36, out_features=32, bias=True)
+                  (norm): BatchNorm1d(16, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                )
+              )
+            )
+          )
+          (to_out): Sequential(
+            (0): Linear(in_features=128, out_features=128, bias=True)
+            (1): Dropout(p=0.0, inplace=False)
+          )
+        )
+        (ln_2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        (mlp): MLP(
+          (linear_pre): Sequential(
+            (0): Linear(in_features=128, out_features=128, bias=True)
+            (1): GELU(approximate='none')
+          )
+          (linear_post): Linear(in_features=128, out_features=128, bias=True)
+          (linears): ModuleList()
+        )
+        (ln_3): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        (mlp2): Linear(in_features=128, out_features=4, bias=True)
+      )
+    )
+  )
+/gpfs/home1/scur1405/HAET/benchmarks/04-PDE-Solving-StandardBenchmark/exp_plas.py:267: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_auto_cast):

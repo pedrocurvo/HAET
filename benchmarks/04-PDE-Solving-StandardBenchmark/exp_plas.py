@@ -174,7 +174,7 @@ def main():
                             W=s2).cuda()
 
     # compile the model, autotuning for performance
-    model = torch.compile(model, mode="max-autotune")
+    model = torch.compile(model, mode="reduce-overhead")
 
     if args.use_wandb and not eval:
         wandb.watch(model, log_freq=100)
