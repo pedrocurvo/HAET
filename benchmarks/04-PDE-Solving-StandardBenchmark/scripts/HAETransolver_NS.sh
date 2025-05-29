@@ -5,7 +5,7 @@
 #SBATCH --job-name=ns
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=20:00:00
+#SBATCH --time=40:00:00
 #SBATCH --output=slurm_output/slurm_output_NS_training_%A.out
 
 module purge
@@ -42,7 +42,7 @@ srun python exp_ns.py \
     --slice_num 32 \
     --unified_pos 1 \
     --ref 8 \
-    --eval 1 \
+    --eval 0 \
     --save_name ns_HAETransolver
 
 echo "Experiment completed. Check the output files for results."
