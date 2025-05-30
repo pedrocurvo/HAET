@@ -183,7 +183,7 @@ wandb/
 metrics/
 
 # results
-results/
+# results/
 
 
 
@@ -344,7 +344,7 @@ cython_debug/
 # End of https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks
 
 # All .out files
-*.out
+# *.out
 
 # Personal 
 personal/
