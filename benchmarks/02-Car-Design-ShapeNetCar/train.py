@@ -83,7 +83,7 @@ def train(device, model, train_loader, optimizer, scheduler, reg=1, checkpoint_p
         
         # Forward pass with gradient computation timing and AMP autocast
         forward_start = time.time()
-        with autocast('cuda'):
+        with autocast('cuda', dtype=torch.bfloat16):
             out = model((cfd_data, geom))
             targets = cfd_data.y
 
@@ -210,7 +210,7 @@ def test(device, model, test_loader):
         geom = geom.to(device)
         
         # Use autocast for validation as well for consistent precision
-        with autocast('cuda'):
+        with autocast('cuda', dtype=torch.bfloat16):
             out = model((cfd_data, geom))
             targets = cfd_data.y
 
