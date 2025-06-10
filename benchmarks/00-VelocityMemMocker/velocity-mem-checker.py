@@ -14,7 +14,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 from models.HAETransolver_Irregular_Mesh import Model
 
 
-def benchmark_model(num_points, space_dim=1, fun_dim=1, n_hidden=256):
+def benchmark_model(num_points, space_dim=1, fun_dim=1, n_hidden=256, slice_num=32):
     """
     Benchmarks the HAETransolver model for a given number of points.
 
@@ -39,9 +39,13 @@ def benchmark_model(num_points, space_dim=1, fun_dim=1, n_hidden=256):
         n_head=8,
         mlp_ratio=2,
         out_dim=4,
-        slice_num=32,
-        unified_pos=0
+        slice_num=slice_num,
+        unified_pos=0,
+        ball_sizes=[4, 2]
     ).cuda()
+    
+    # Compile the model
+    # model = torch.compile(model)  # Use torch.compile for dynamic shapes
     model.eval()  # Set model to evaluation mode
 
     # Warm-up GPU
@@ -79,10 +83,11 @@ def benchmark_model(num_points, space_dim=1, fun_dim=1, n_hidden=256):
 
 
 if __name__ == "__main__":
-    point_counts = [1000, 10000, 100000, 1000000, 2000000, 3000000]
+    point_counts = [5000, 10000, 50000, 100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000]
     space_dim_test = 3
     fun_dim_test = 1
     n_hidden_test = 256
+    num_slices = [32]
     
     # Clear CUDA cache before starting benchmark
     torch.cuda.empty_cache()
@@ -91,19 +96,25 @@ if __name__ == "__main__":
         try:
             # Clear CUDA cache before each benchmark run
             torch.cuda.empty_cache()
-            time_taken, memory_used = benchmark_model(
-                num_points=points,
-                space_dim=space_dim_test,
-                fun_dim=fun_dim_test,
-                n_hidden=n_hidden_test
-            )
-            print(f"Successfully benchmarked {points} points. Time: {time_taken:.4f}s, Peak Memory: {memory_used / 1024**2:.2f} MB")
-            print("-" * 30)
+            for slice_num in num_slices:
+                time_taken, memory_used = benchmark_model(
+                    num_points=points,
+                    space_dim=space_dim_test,
+                    fun_dim=fun_dim_test,
+                    n_hidden=n_hidden_test,
+                    slice_num=slice_num
+                )
+                print(f"Successfully benchmarked {points} points with {slice_num} slices. Time: {time_taken:.4f}s, Peak Memory: {memory_used / 1024**2:.2f} MB")
+                print("-" * 30)
         except RuntimeError as e:
             if "out of memory" in str(e).lower():
                 print(f"Ran out of memory with {points} points.")
                 print(f"Error: {e}")
-                break
+                # Continue to the next point count
+                torch.cuda.empty_cache()
+                continue
+                # If it's the last point count, break the loop
+
             else:
                 print(f"A runtime error occurred with {points} points: {e}")
                 break

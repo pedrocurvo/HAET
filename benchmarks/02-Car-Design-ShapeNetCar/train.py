@@ -1,5 +1,6 @@
 import numpy as np
 import time, json, os
+import math
 import torch
 import torch.nn as nn
 import wandb
@@ -16,6 +17,11 @@ def get_nb_trainable_params(model):
     '''
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
     return sum([np.prod(p.size()) for p in model_parameters])
+
+
+def is_nan_loss(loss):
+    """Check if the loss is NaN or infinite"""
+    return not torch.isfinite(loss).all() or math.isnan(loss.item())
 
 
 class EarlyStopping:
@@ -51,7 +57,7 @@ def get_memory_usage():
     return process.memory_info().rss / 1024 / 1024  # in MB
 
 
-def train(device, model, train_loader, optimizer, scheduler, reg=1):
+def train(device, model, train_loader, optimizer, scheduler, reg=1, checkpoint_path=None):
     model.train()
     torch.cuda.empty_cache()  # Clear GPU memory before training
     
@@ -65,6 +71,8 @@ def train(device, model, train_loader, optimizer, scheduler, reg=1):
     
     # Initialize gradient scaler for AMP
     scaler = GradScaler('cuda')
+    
+    nan_recoveries = 0  # Track number of NaN recoveries
     
     for batch_idx, (cfd_data, geom) in enumerate(train_loader):
         batch_start = time.time()
@@ -84,6 +92,54 @@ def train(device, model, train_loader, optimizer, scheduler, reg=1):
             loss_velo = loss_velo_var.mean()
             total_loss = loss_velo + reg * loss_press
         forward_time = time.time() - forward_start
+
+        # Check for NaN loss and recover if needed
+        if is_nan_loss(total_loss) or is_nan_loss(loss_press) or is_nan_loss(loss_velo):
+            print(f"🚨 NaN loss detected at batch {batch_idx}! Attempting recovery...")
+            wandb.log({
+                'nan_event/batch_idx': batch_idx,
+                'nan_event/epoch': -1,  # Will be set in main function
+                'nan_event/recovery_attempt': nan_recoveries + 1
+            })
+            
+            if checkpoint_path and os.path.exists(checkpoint_path):
+                try:
+                    # Load checkpoint
+                    checkpoint = torch.load(checkpoint_path, map_location=device)
+                    model.load_state_dict(checkpoint['model_state_dict'])
+                    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                    
+                    # Reset scheduler to a lower max_lr
+                    old_max_lr = scheduler.get_last_lr()
+                    new_max_lr = old_max_lr * 0.9  # Reduce max LR by 10%
+                    
+                    # Create new scheduler with reduced max LR
+                    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+                        optimizer,
+                        max_lr=new_max_lr,
+                        total_steps=scheduler.total_steps,
+                        final_div_factor=1000.,
+                    )
+                    
+                    print(f"✅ Checkpoint loaded. Max LR reduced: {old_max_lr:.2e} → {new_max_lr:.2e}")
+                    wandb.log({
+                        'nan_recovery/old_max_lr': old_max_lr,
+                        'nan_recovery/new_max_lr': new_max_lr,
+                        'nan_recovery/success': True
+                    })
+                    
+                    nan_recoveries += 1
+                    continue  # Skip this batch and move to next
+                    
+                except Exception as e:
+                    print(f"❌ Failed to load checkpoint: {e}")
+                    wandb.log({'nan_recovery/success': False, 'nan_recovery/error': str(e)})
+                    # Continue with current state but skip backward pass
+                    continue
+            else:
+                print("❌ No checkpoint available for recovery")
+                wandb.log({'nan_recovery/success': False, 'nan_recovery/error': 'No checkpoint available'})
+                continue
 
         # Backward pass with gradient computation timing and AMP scaler
         backward_start = time.time()
@@ -121,23 +177,25 @@ def train(device, model, train_loader, optimizer, scheduler, reg=1):
                 'batch/forward_time': forward_time,
                 'batch/backward_time': backward_time,
                 'batch/batch_time': batch_time,
-                'batch/eta_seconds': eta
+                'batch/eta_seconds': eta,
+                'batch/nan_recoveries': nan_recoveries
             })
 
-    mean_loss_press = np.mean(losses_press)
-    mean_loss_velo = np.mean(losses_velo)
+    mean_loss_press = np.mean(losses_press) if losses_press else float('inf')
+    mean_loss_velo = np.mean(losses_velo) if losses_velo else float('inf')
     
     metrics = {
         "train/loss_pressure": mean_loss_press,
         "train/loss_velocity": mean_loss_velo,
         "train/total_loss": mean_loss_velo + reg * mean_loss_press,
         "train/learning_rate": scheduler.get_last_lr()[0],
-        "train/avg_batch_time": np.mean(batch_times),
-        "train/memory_used_mb": get_memory_usage()
+        "train/avg_batch_time": np.mean(batch_times) if batch_times else 0,
+        "train/memory_used_mb": get_memory_usage(),
+        "train/nan_recoveries": nan_recoveries
     }
     wandb.log(metrics)
 
-    return mean_loss_press, mean_loss_velo
+    return mean_loss_press, mean_loss_velo, nan_recoveries
 
 
 @torch.no_grad()
@@ -215,34 +273,70 @@ def main(device, train_dataset, val_dataset, Net, hparams, path, reg=1, val_iter
         final_div_factor=1000.,
     )
     
+    # .MultiStepLR(optimizer,
+    #     milestones=[int(hparams['nb_epochs'] * 0.20) * len(train_dataset) // hparams['batch_size'],
+    #                 int(hparams['nb_epochs'] * 0.50) * len(train_dataset) // hparams['batch_size']],
+    #     gamma=0.1
+    # )
+    
+    
+    # CREATE DATALOADERS ONCE BEFORE THE LOOP
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=hparams['batch_size'],
+        shuffle=True,
+        drop_last=True,
+        pin_memory=True, 
+        num_workers=8,
+        persistent_workers=True  # Keep workers alive between epochs
+    )
+    
+    if val_iter is not None:
+        val_loader = DataLoader(
+            val_dataset, 
+            batch_size=1, 
+            pin_memory=True, 
+            num_workers=8,
+            persistent_workers=True
+        )
+    
     # Initialize early stopping
     early_stopping = EarlyStopping(patience=7, min_delta=1e-6)
     best_val_loss = float('inf')
     
     start = time.time()
     train_loss, val_loss = 1e5, 1e5
+    total_nan_recoveries = 0  # Track total NaN recoveries across all epochs
+    
+    # Setup checkpoint path for NaN recovery
+    checkpoint_path = checkpoint_dir / 'last_checkpoint.pth'
     
     pbar_train = tqdm(range(hparams['nb_epochs']), position=0)
     for epoch in pbar_train:
         epoch_start = time.time()
         
-        train_loader = DataLoader(train_dataset,
-                                  batch_size=hparams['batch_size'],
-                                  shuffle=True,
-                                  drop_last=True,
-                                  pin_memory=True, 
-                                  num_workers=4)
-        loss_velo, loss_press = train(device,model, train_loader, optimizer, lr_scheduler, reg=reg)
+        # JUST USE THE EXISTING DATALOADER
+        loss_velo, loss_press, epoch_nan_recoveries = train(
+            device, model, train_loader, optimizer, lr_scheduler, 
+            reg=reg, checkpoint_path=str(checkpoint_path)
+        )
+        total_nan_recoveries += epoch_nan_recoveries
         train_loss = loss_velo + reg * loss_press
-        del train_loader
+
+        # Save checkpoint after each epoch for NaN recovery
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': lr_scheduler.state_dict(),
+            'train_loss': train_loss,
+            'nan_recoveries': total_nan_recoveries,
+        }, str(checkpoint_path))
 
         if val_iter is not None and (epoch == hparams['nb_epochs'] - 1 or epoch % val_iter == 0):
-            val_loader = DataLoader(val_dataset, batch_size=1, 
-                                    pin_memory=True, 
-                                    num_workers=4)
+            # USE THE EXISTING VAL_LOADER
             loss_velo, loss_press = test(device, model, val_loader)
             val_loss = loss_velo + reg * loss_press
-            del val_loader
 
             # Save best model
             if val_loss < best_val_loss:
@@ -268,12 +362,14 @@ def main(device, train_dataset, val_dataset, Net, hparams, path, reg=1, val_iter
                 'train_loss': f'{train_loss:.6f}',
                 'val_loss': f'{val_loss:.6f}',
                 'lr': f'{lr_scheduler.get_last_lr()[0]:.2e}',
-                'best_val': f'{best_val_loss:.6f}'
+                'best_val': f'{best_val_loss:.6f}',
+                'nan_recoveries': total_nan_recoveries
             })
         else:
             pbar_train.set_postfix({
                 'train_loss': f'{train_loss:.6f}',
-                'lr': f'{lr_scheduler.get_last_lr()[0]:.2e}'
+                'lr': f'{lr_scheduler.get_last_lr()[0]:.2e}',
+                'nan_recoveries': total_nan_recoveries
             })
         
         # Log epoch metrics
@@ -284,7 +380,9 @@ def main(device, train_dataset, val_dataset, Net, hparams, path, reg=1, val_iter
             'epoch/learning_rate': lr_scheduler.get_last_lr()[0],
             'epoch/time_seconds': epoch_time,
             'epoch/best_val_loss': best_val_loss,
-            'epoch/memory_used_mb': get_memory_usage()
+            'epoch/memory_used_mb': get_memory_usage(),
+            'epoch/total_nan_recoveries': total_nan_recoveries,
+            'epoch/epoch_nan_recoveries': epoch_nan_recoveries
         })
 
     end = time.time()
@@ -315,7 +413,8 @@ def main(device, train_dataset, val_dataset, Net, hparams, path, reg=1, val_iter
             'best_val_loss': best_val_loss,
             'coef_norm': list(coef_norm),
             'early_stopped': early_stopping.early_stop,
-            'final_epoch': epoch + 1
+            'final_epoch': epoch + 1,
+            'total_nan_recoveries': total_nan_recoveries
         }
         
         # Log final metrics to wandb
@@ -326,7 +425,8 @@ def main(device, train_dataset, val_dataset, Net, hparams, path, reg=1, val_iter
             "final/time_elapsed": time_elapsed,
             "final/nb_parameters": params_model,
             "final/early_stopped": early_stopping.early_stop,
-            "final/epochs_trained": epoch + 1
+            "final/epochs_trained": epoch + 1,
+            "final/total_nan_recoveries": total_nan_recoveries
         })
         
         log_path = path + os.sep + f'log_{hparams["nb_epochs"]}.json'

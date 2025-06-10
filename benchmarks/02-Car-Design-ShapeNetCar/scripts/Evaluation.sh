@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_a100
+#SBATCH --partition=gpu_mig
 #SBATCH --gpus=1
 #SBATCH --job-name=erwin
 #SBATCH --ntasks=1
@@ -18,8 +18,8 @@ module load CUDA/12.4.0
 cd $HOME/HAET/benchmarks/02-Car-Design-ShapeNetCar  
 
 srun python main_evaluation.py \
-    --cfd_model=ErwinTransolverDefault \
+    --cfd_model=ErwinTransolverROUTER \
     --data_dir data/shapenet_car/mlcfd_data/training_data \
     --save_dir data/shapenet_car/mlcfd_data/preprocessed_data \
     --slice_num 32 \
-    --visualize
+    --unified_pos 1
