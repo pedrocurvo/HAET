@@ -47,11 +47,14 @@ class ErwinTransolver(nn.Module):
         
         # Rep-Slice projection
         self.in_project_slice = nn.Linear(dim_head, slice_num)
+        self.in_project_slice._is_rep_slice = True  # Tag for custom init
         nn.init.orthogonal_(self.in_project_slice.weight)
         
         # Ada-Temp: Base temperature + adaptive component
         self.base_temp = base_temp
+        self.ada_temp_norm = nn.LayerNorm(dim_head)
         self.ada_temp_linear = nn.Linear(dim_head, 1)  # Adaptive temperature adjustment
+        self.ada_temp_linear._is_ada_temp = True
         
         # Erwin network for processing eidetic states
         self.erwin = ErwinTransformer(
@@ -78,19 +81,19 @@ class ErwinTransolver(nn.Module):
         
         # Initialize slice weights attribute
         self.slice_weights = None
-        
+
+    def gumbel_softmax_sample(self, logits, tau, training=True):
+        """Gumbel-Softmax sampling as in Eq. (4)"""
+        if training:
+            # Sample Gumbel noise
+            gumbel_noise = -torch.log(-torch.log(torch.rand_like(logits) + 1e-8) + 1e-8)
+            return torch.softmax((logits + gumbel_noise) / tau, dim=-1)
+        else:
+            return torch.softmax(logits / tau, dim=-1)
 
     def forward(self, x: torch.Tensor, pos: torch.Tensor = None) -> torch.Tensor:
         """
         Implements Transolver++ Algorithm 1: Parallel Physics-Attention with Eidetic States
-        
-        Args:
-            x: Input tensor of shape (B, N, C) where:
-               B = batch size
-               N = number of points
-               C = number of channels/features
-        Returns:
-            Updated tensor of shape (B, N, C)
         """
         B, N, C = x.shape
 
@@ -99,41 +102,29 @@ class ErwinTransolver(nn.Module):
         pos_proj = self.pos_projector(pos).view(B, N, self.heads, self.dimensionality).transpose(1, 2)  # [B, H, N, D]
 
         # Adaptive temperature
-        tau = self.base_temp + self.ada_temp_linear(x_proj).clamp(min=-0.4, max=0.4)
+        tau = torch.clamp(self.base_temp + self.ada_temp_linear(self.ada_temp_norm(x_proj)), min=0.1, max=2.0)
 
-        # Rep-Slice logits
-        eps_term = torch.log(-torch.log(torch.tensor(self.epsilon, device=x.device)))
-        logits = (self.in_project_slice(x_proj) - eps_term) / tau
+        # Rep-Slice: Get raw logits and apply Gumbel-Softmax
+        raw_logits = self.in_project_slice(x_proj)  # [B, H, N, G]
+        slice_probs = self.gumbel_softmax_sample(raw_logits, tau, self.training)  # [B, H, N, G]
 
-        # Router
-        topk = min(4, self.slice_num)
+        # Router: Top-k selection on probabilities
+        # Optional: Apply top-k for sparsity
+        topk = min(4, slice_probs.shape[-1])
+        topk_vals, topk_idx = torch.topk(slice_probs, k=topk, dim=-1)
+        slice_weights = torch.zeros_like(slice_probs)
+        slice_weights.scatter_(-1, topk_idx, topk_vals)
+        # Renormalize to maintain probability properties
+        slice_weights = slice_weights / (slice_weights.sum(dim=-1, keepdim=True) + 1e-8)
 
-        # Top-k per point
-        topk_vals, topk_idx = torch.topk(logits / tau, k=topk, dim=-1)  # [B, H, N, k]
-
-        # Softmax over selected experts
-        gate_scores = torch.softmax(topk_vals, dim=-1).to(logits.dtype)  # [B, H, N, k]
-
-        # Create a zero tensor for sparse weights
-        B, H, N, G = logits.shape
-        slice_weights = torch.zeros_like(logits)  # [B, H, N, G]
-
-        # Scatter softmax weights into slice_weights
-        slice_weights.scatter_(-1, topk_idx, gate_scores)  # [B, H, N, G]
-
-        # Top-k masking
-        # k = max(32, int(0.01 * self.slice_num)) # TODO: Replace 32
-        # topk_vals, topk_idx = torch.topk(logits, k=k, dim=2)
-        # masked_logits = torch.full_like(logits, float('-inf')).scatter(2, topk_idx, topk_vals)
-        #slice_weights = torch.softmax(logits, dim=2)  # [B, H, N, G]
         self.slice_weights = slice_weights  # Save for inspection
 
-        # Normalize weights
+        # Normalize weights (for eidetic state computation)
         norm = slice_weights.sum(2, keepdim=True)  # [B, H, 1, G]
 
-        # Eidetic state computation (matmul faster than einsum)
-        eidetic_states = torch.matmul(slice_weights.transpose(-2, -1), x_proj) / (norm.transpose(-1, -2) + 1e-5)
-        eidetic_pos = torch.matmul(slice_weights.transpose(-2, -1), pos_proj) / (norm.transpose(-1, -2) + 1e-5)
+        # Eidetic state computation
+        eidetic_states = torch.matmul(slice_weights.transpose(-2, -1), x_proj) / (norm.transpose(-1, -2) + 1e-3)  # Increased epsilon
+        eidetic_pos = torch.matmul(slice_weights.transpose(-2, -1), pos_proj) / (norm.transpose(-1, -2) + 1e-3)
 
         # Prepare for Erwin
         B, H, G, D = eidetic_states.shape
@@ -268,8 +259,14 @@ class Model(nn.Module):
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
-            trunc_normal_(m.weight, std=0.02)
-            if isinstance(m, nn.Linear) and m.bias is not None:
+            if hasattr(m, 'weight') and m.weight is not None:
+                if getattr(m, '_is_rep_slice', False):
+                    nn.init.orthogonal_(m.weight)  # Special init for Rep-Slice
+                elif getattr(m, '_is_ada_temp', False):  # Add this
+                    nn.init.zeros_(m.weight)  # Start with no temperature adjustment
+                else:
+                    trunc_normal_(m.weight, std=0.02)
+            if m.bias is not None:
                 nn.init.constant_(m.bias, 0)
         elif isinstance(m, (nn.LayerNorm, nn.BatchNorm1d)):
             if hasattr(m, 'bias') and m.bias is not None:
