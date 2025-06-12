@@ -17,7 +17,7 @@ from dataset.dataset import GraphDataset
 import scipy as sc
 from models.Transolver import Model
 from tqdm import tqdm
-from torch.cuda.amp import autocast
+from torch.amp import autocast
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
@@ -223,7 +223,7 @@ print(f"Loading model from: {path}")
 model = create_model(args)
 
 # Load checkpoint
-checkpoint_path = os.path.join(path, f'checkpoints/best_model.pth')
+checkpoint_path = os.path.join(path, f'model_{args.nb_epochs}.pth')
 checkpoint = torch.load(checkpoint_path, map_location=device)
 
 # Process state dict to remove "_orig_mod." prefix from keys (added by torch.compile)
@@ -278,7 +278,7 @@ with torch.no_grad():
         geom = geom.to(device)
         tic = time.time()
         
-        with autocast():
+        with autocast('cuda', dtype=torch.bfloat16):
             out = model((cfd_data, geom))
             
         toc = time.time()
@@ -289,18 +289,20 @@ with torch.no_grad():
             std = torch.tensor(coef_norm[3]).to(device)
             pred_press = out[cfd_data.surf, -1] * std[-1] + mean[-1]
             gt_press = targets[cfd_data.surf, -1] * std[-1] + mean[-1]
+            pred_surf_velo = out[cfd_data.surf, :-1] * std[:-1] + mean[:-1]
+            gt_surf_velo = targets[cfd_data.surf, :-1] * std[:-1] + mean[:-1]
             pred_velo = out[~cfd_data.surf, :-1] * std[:-1] + mean[:-1]
             gt_velo = targets[~cfd_data.surf, :-1] * std[:-1] + mean[:-1]
             out_denorm = out * std + mean
             y_denorm = targets * std + mean
 
-        np.save(os.path.join(results_dir, f"{index}_pred.npy"), out_denorm.detach().cpu().numpy())
-        np.save(os.path.join(results_dir, f"{index}_gt.npy"), y_denorm.detach().cpu().numpy())
+        np.save(os.path.join(results_dir, f"{index}_pred.npy"), out_denorm.float().detach().cpu().numpy())
+        np.save(os.path.join(results_dir, f"{index}_gt.npy"), y_denorm.float().detach().cpu().numpy())
 
-        pred_coef = cal_coefficient(vallst[index].split('/')[1], pred_press[:, None].detach().cpu().numpy(),
-                                    pred_velo.detach().cpu().numpy(), root=args.data_dir)
-        gt_coef = cal_coefficient(vallst[index].split('/')[1], gt_press[:, None].detach().cpu().numpy(),
-                                  gt_velo.detach().cpu().numpy(), root=args.data_dir)
+        pred_coef = cal_coefficient(vallst[index].split('/')[1], pred_press[:, None].float().detach().cpu().numpy(),
+                                    pred_surf_velo.float().detach().cpu().numpy(), root=args.data_dir)
+        gt_coef = cal_coefficient(vallst[index].split('/')[1], gt_press[:, None].float().detach().cpu().numpy(),
+                                  gt_surf_velo.float().detach().cpu().numpy(), root=args.data_dir)
 
         gt_coef_list.append(gt_coef)
         pred_coef_list.append(pred_coef)
