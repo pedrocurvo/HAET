@@ -108,15 +108,6 @@ class ErwinTransolver(nn.Module):
         raw_logits = self.in_project_slice(x_proj)  # [B, H, N, G]
         slice_weights = self.gumbel_softmax_sample(raw_logits, tau, self.training)  # [B, H, N, G]
 
-        # # Router: Top-k selection on probabilities
-        # # Optional: Apply top-k for sparsity
-        # topk = min(4, slice_weights.shape[-1])
-        # topk_vals, topk_idx = torch.topk(slice_weights, k=topk, dim=-1)
-        # slice_weights = torch.zeros_like(slice_weights)
-        # slice_weights.scatter_(-1, topk_idx, topk_vals)
-        # # Renormalize to maintain probability properties
-        # slice_weights = slice_weights / (slice_weights.sum(dim=-1, keepdim=True) + 1e-8)
-
         if not self.training:
             self.slice_weights = slice_weights  # Save for inspection
 
