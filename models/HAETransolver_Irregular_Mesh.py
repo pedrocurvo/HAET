@@ -39,6 +39,8 @@ class TransolverErwinBlock(nn.Module):
         last_layer: bool = False,
         out_dim: int = 1,
         slice_num: int = 32,
+        radius=1.0,
+        dimensionality=1,
         # ErwinTransformer parameters
         c_hidden=None,
         ball_sizes=None,
@@ -84,6 +86,8 @@ class TransolverErwinBlock(nn.Module):
             dim_head=hidden_dim // num_heads,
             dropout=dropout,
             slice_num=slice_num,
+            radius=radius,
+            dimensionality=dimensionality,
             # Pass the ErwinTransformer parameters
             c_hidden=c_hidden,
             ball_sizes=ball_sizes,
@@ -111,7 +115,7 @@ class TransolverErwinBlock(nn.Module):
             self.ln_3 = nn.LayerNorm(hidden_dim)
             self.mlp2 = nn.Linear(hidden_dim, out_dim)
 
-    def forward(self, fx):
+    def forward(self, fx, pos=None):
         """Forward pass through the Transolver block.
 
         Args:
@@ -122,7 +126,7 @@ class TransolverErwinBlock(nn.Module):
             or [batch_size, num_points, out_dim] if last_layer=True
         """
         # Apply attention with residual connection
-        fx = self.Attn(self.ln_1(fx)) + fx
+        fx = self.Attn(self.ln_1(fx), pos) + fx
 
         # Apply MLP with residual connection
         fx = self.mlp(self.ln_2(fx)) + fx
@@ -170,6 +174,7 @@ class Model(nn.Module):
         ref=8,
         unified_pos=False,
         # ErwinTransformer parameters
+        radius=1.0,
         c_hidden=None,
         ball_sizes=None,
         enc_num_heads=None,
@@ -219,7 +224,7 @@ class Model(nn.Module):
         self.space_dim = space_dim
         if self.unified_pos:
             self.preprocess = MLP(
-                fun_dim + self.ref * self.ref,
+                fun_dim + self.ref ** space_dim,
                 n_hidden * 2,
                 n_hidden,
                 n_layers=0,
@@ -251,7 +256,9 @@ class Model(nn.Module):
                     out_dim=out_dim,
                     slice_num=slice_num,
                     last_layer=(_ == n_layers - 1),
+                    dimensionality=space_dim,
                     # Pass the ErwinTransformer parameters
+                    radius=radius,
                     c_hidden=c_hidden,
                     ball_sizes=ball_sizes,
                     enc_num_heads=enc_num_heads,
@@ -277,22 +284,21 @@ class Model(nn.Module):
         self.apply(self._init_weights)
 
     def _init_weights(self, m):
-        """Initialize weights for specific layer types.
-
-        Args:
-            m: Module to initialize
-
-        Note:
-            - Linear layers: Weights initialized with truncated normal distribution
-            - LayerNorm/BatchNorm1d: Bias initialized to 0, weight to 1
-        """
         if isinstance(m, nn.Linear):
-            trunc_normal_(m.weight, std=0.02)
-            if isinstance(m, nn.Linear) and m.bias is not None:
+            if hasattr(m, 'weight') and m.weight is not None:
+                if getattr(m, '_is_rep_slice', False):
+                    nn.init.orthogonal_(m.weight)  # Special init for Rep-Slice
+                elif getattr(m, '_is_ada_temp', False):  # Add this
+                    nn.init.zeros_(m.weight)  # Start with no temperature adjustment
+                else:
+                    trunc_normal_(m.weight, std=0.02)
+            if m.bias is not None:
                 nn.init.constant_(m.bias, 0)
         elif isinstance(m, (nn.LayerNorm, nn.BatchNorm1d)):
-            nn.init.constant_(m.bias, 0)
-            nn.init.constant_(m.weight, 1.0)
+            if hasattr(m, 'bias') and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+            if hasattr(m, 'weight') and m.weight is not None:
+                nn.init.constant_(m.weight, 1.0)
 
     def get_grid(self, x, batchsize=1):
         """Generate a reference grid and compute distances to input points.
@@ -347,6 +353,8 @@ class Model(nn.Module):
         Returns:
             Output tensor of shape [batch_size, num_points, out_dim]
         """
+        # Original positons
+        original_pos = x
         # Apply position encoding if unified_pos is enabled
         if self.unified_pos:
             x = self.get_grid(x, x.shape[0])
@@ -371,6 +379,10 @@ class Model(nn.Module):
 
         # Process through Transolver blocks
         for block in self.blocks:
-            fx = block(fx)
+            fx = block(fx, pos=original_pos)
 
         return fx
+    
+    def get_last_block_slice_weights(self):
+        """Return the slice weights from the last transformer block."""
+        return self.blocks[-1].get_slice_weights()

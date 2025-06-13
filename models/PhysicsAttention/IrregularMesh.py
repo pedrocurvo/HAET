@@ -47,6 +47,8 @@ class Physics_Attention_Irregular_Mesh(nn.Module):
         slice_num=64, 
         base_temp=0.5, 
         epsilon=1e-6,
+        radius: float = 1.0,     # Add radius parameter with default value
+        dimensionality: int = 3,
         # ErwinTransformer parameters
         c_hidden=None,
         ball_sizes=None,
@@ -59,7 +61,8 @@ class Physics_Attention_Irregular_Mesh(nn.Module):
         decode=True,
         mlp_ratio=4,
         mp_steps=0,
-        embed=False
+        embed=False,
+        memory_tokens=32,
     ):
         """Initialize the Physics_Attention_Irregular_Mesh module with Transolver++.
 
@@ -88,18 +91,41 @@ class Physics_Attention_Irregular_Mesh(nn.Module):
         inner_dim = dim_head * heads
         self.dim_head = dim_head
         self.heads = heads
-        self.dimensionality = 3  # Spatial dimensionality for the irregular mesh
+        self.slice_num = slice_num
+        self.dimensionality = dimensionality  # Spatial dimensionality for the irregular mesh
         self.epsilon = epsilon
+        self.radius = radius    # Store the radius parameter
+        self.memory_tokens = self.slice_num // 32
+
+        # Memory tokens - learnable parameters
+        self.memory_states = nn.Parameter(torch.randn(1, heads, self.memory_tokens, dim_head))
+        init_pos = self.uniform_memory_positions(heads, self.memory_tokens, dimensionality).clone()
+        self.memory_positions = nn.Parameter(init_pos)
+        
+        # Initialize memory tokens
+        nn.init.xavier_uniform_(self.memory_states)
+       #  nn.init.xavier_uniform_(self.memory_positions)
         
         # For Transolver++, we only need one projection to save memory
         self.in_project_x = nn.Linear(dim, inner_dim)
+
+        # Input positions for slicing - learn position representations
+        self.pos_projector = nn.Sequential(
+            nn.Linear(dimensionality, dimensionality * heads),
+            nn.GELU(),
+            nn.Linear(dimensionality * heads, heads * self.dimensionality),
+        )
+
+        # Rep-Slice projection
         self.in_project_slice = nn.Linear(dim_head, slice_num)
+        self.in_project_slice._is_rep_slice = True  # Tag for custom init
+        nn.init.orthogonal_(self.in_project_slice.weight)
         
         # Ada-Temp: Base temperature + adaptive component
         self.base_temp = base_temp
+        self.ada_temp_norm = nn.LayerNorm(dim_head)
         self.ada_temp_linear = nn.Linear(dim_head, 1)  # Adaptive temperature adjustment
-        
-        torch.nn.init.orthogonal_(self.in_project_slice.weight)  # use a principled initialization
+        self.ada_temp_linear._is_ada_temp = True
 
         # Set default ErwinTransformer parameters if not provided
         if c_hidden is None:
@@ -138,7 +164,34 @@ class Physics_Attention_Irregular_Mesh(nn.Module):
 
         self.to_out = nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout))
 
-    def forward(self, x):
+        # Initialize slice weights attribute
+        self.slice_weights = None
+    
+    def uniform_memory_positions(self, heads, memory_tokens, dimensionality):
+        grid = torch.linspace(0, 1, steps=memory_tokens)
+        if dimensionality == 1:
+            base = grid
+        elif dimensionality == 2:
+            base = torch.stack(torch.meshgrid(grid, grid, indexing="ij"), dim=-1).view(-1, 2)
+        elif dimensionality == 3:
+            base = torch.stack(torch.meshgrid(grid, grid, grid, indexing="ij"), dim=-1).view(-1, 3)
+        else:
+            raise ValueError("Unsupported dimensionality")
+
+        base = base[:memory_tokens]  # Ensure size
+        base = base.unsqueeze(0).unsqueeze(0).expand(1, heads, -1, -1)  # [1, H, M, D]
+        return base
+    
+    def gumbel_softmax_sample(self, logits, tau, training=True):
+        """Gumbel-Softmax sampling as in Eq. (4)"""
+        if training:
+            # Sample Gumbel noise
+            gumbel_noise = -torch.log(-torch.log(torch.rand_like(logits) + 1e-8) + 1e-8)
+            return torch.softmax((logits + gumbel_noise) / tau, dim=-1)
+        else:
+            return torch.softmax(logits / tau, dim=-1)
+
+    def forward(self, x: torch.Tensor, pos: torch.Tensor = None) -> torch.Tensor:
         """Forward pass of the physics-informed attention module with Transolver++.
         
         Implements Transolver++ Algorithm 1: Parallel Physics-Attention with Eidetic States
@@ -162,74 +215,52 @@ class Physics_Attention_Irregular_Mesh(nn.Module):
             .permute(0, 2, 1, 3)  # Reorder to [B, H, N, C]
             .contiguous()
         )
+
+        # Project positions for slicing - learn position representations
+        pos_proj = self.pos_projector(pos).view(B, N, self.heads, self.dimensionality).transpose(1, 2)  # [B, H, N, D]
         
-        # Compute adaptive temperature (Ada-Temp): τ = τ0 + Linear(xi)
-        # Implementation: τ(k) ←τ0 + Ada-Temp(x(k))
-        adaptive_temp = self.base_temp + self.ada_temp_linear(x_proj).clamp(min=-0.4, max=0.4)
+        # Adaptive temperature
+        tau = torch.clamp(self.base_temp + self.ada_temp_linear(self.ada_temp_norm(x_proj)), min=0.1, max=2.0)
+
+        # Rep-Slice: Get raw logits and apply Gumbel-Softmax
+        raw_logits = self.in_project_slice(x_proj)  # [B, H, N, G]
+        slice_weights = self.gumbel_softmax_sample(raw_logits, tau, self.training)  # [B, H, N, G]
+
+        if not self.training:
+            self.slice_weights = slice_weights  # Save for inspection
+
+        # Normalize weights (for eidetic state computation)
+        norm = slice_weights.sum(2, keepdim=True)  # [B, H, 1, G]
+
+        # Eidetic state computation
+        eidetic_states = torch.matmul(slice_weights.transpose(-2, -1), x_proj) / (norm.transpose(-1, -2) + 1e-3)
+        eidetic_pos = torch.matmul(slice_weights.transpose(-2, -1), pos_proj) / (norm.transpose(-1, -2) + 1e-3)
+
+        ### Add memory tokens to eidetic states
+        # Expand memory tokens to match batch size
+        memory_states_expanded = self.memory_states.expand(B, -1, -1, -1)  # [B, H, M, D]
+        memory_pos_expanded = self.memory_positions.expand(B, -1, -1, -1)  # [B, H, M, D_pos]
         
-        # Compute Rep-Slice: Softmax(Linear(x) - log(-log(ε))) / τ
-        # Implementation: w(k) ← Rep-Slice(x(k),τ(k))
-        log_neg_log_epsilon = torch.log(-torch.log(torch.tensor(self.epsilon, device=x.device)))
-        slice_logits = self.in_project_slice(x_proj) - log_neg_log_epsilon
-        slice_weights = torch.softmax(slice_logits / adaptive_temp, dim=2)  # [B, H, N, G]
-
-        # Compute weights norm: w(k)_norm ← sum_i(w(k)_i)
-        slice_norm = slice_weights.sum(2)  # [B, H, G]
-
-        # Compute eidetic states: s(k) ← w(k)T x(k) / w_norm
-        # We use x_proj both as x and f to save memory
-        eidetic_states = torch.einsum(
-            "bhnc,bhng->bhgc", x_proj, slice_weights
-        )  # [B, H, G, C]
-
-        # Normalize eidetic states by the sum of weights to maintain scale
-        eidetic_states = eidetic_states / (
-            (slice_norm + 1e-5)[:, :, :, None].repeat(1, 1, 1, self.dim_head)
-        )
+        # Concatenate memory tokens with eidetic states
+        eidetic_states = torch.cat([eidetic_states, memory_states_expanded], dim=2)  # [B, H, G+M, D]
+        eidetic_pos = torch.cat([eidetic_pos, memory_pos_expanded], dim=2)  # [B, H, G+M, D_pos]
 
         ### (2) Transform eidetic states with ErwinTransformer
-        # Extract dimensions of eidetic states tensor
-        B, H, G, C = eidetic_states.shape
+        # Prepare for Erwin - now includes memory tokens
+        B, H, G_plus_M, D = eidetic_states.shape
+        states_flat = eidetic_states.reshape(B * H * G_plus_M, D)
+        pos_flat = eidetic_pos.reshape(B * H * G_plus_M, self.dimensionality)
+        batch_idx = torch.arange(B * H, device=x.device).repeat_interleave(G_plus_M)
 
-        # Reshape eidetic states for ErwinTransformer input format
-        # ErwinTransformer expects a flattened representation [num_points, channels]
-        eidetic_states_flat = eidetic_states.reshape(B * H * G, C)
-
-        # Use center of mass positions for eidetic states instead of random positions
-        # Since eidetic states are already weighted averages (center of mass) of the input features,
-        # we compute their spatial representation in the unit cube based on their relative positions
-        # in the feature space, normalized across each batch and head
+        # Erwin attention
+        updated = self.erwin(states_flat, pos_flat, batch_idx, radius=self.radius)
+        updated = updated.view(B, H, G_plus_M, D)
         
-        # Compute center of mass positions by normalizing features to unit cube
-        feat_min = eidetic_states_flat.min(dim=0, keepdim=True)[0]
-        feat_max = eidetic_states_flat.max(dim=0, keepdim=True)[0]
-        feat_range = feat_max - feat_min + 1e-8  # Add epsilon to avoid division by zero
-        
-        # Use first dimensionality components as spatial positions, normalized to [0,1]
-        pos = (eidetic_states_flat[:, :self.dimensionality] - feat_min[:, :self.dimensionality]) / feat_range[:, :self.dimensionality]
+        # Split back into slice tokens and memory tokens
+        updated_slices = updated[:, :, :self.slice_num, :]  # [B, H, G, D]
+        updated_memory = updated[:, :, self.slice_num:, :]  # [B, H, M, D]
 
-        # Create batch indices to separate different batch and head combinations
-        # Each batch-head pair is treated as a separate point cloud by the transformer
-        batch_idx = torch.arange(B * H, device=eidetic_states.device).repeat_interleave(G)
-
-        # Process through ErwinTransformer to allow interactions between eidetic states
-        # This enables global information exchange and feature refinement
-        # This corresponds to: Update eidetic states s′← Attention(s)
-        processed_states = self.erwin(eidetic_states_flat, pos, batch_idx)
-
-        # Reshape the processed states back to the multi-head format
-        out_eidetic_states = processed_states.reshape(B, H, G, C)
-
-        ### (3) Deslice operation: Project processed states back to original points
-        # Distribute processed eidetic states information back to original points
-        # Using the same slice weights ensures information flows properly between
-        # the slicing and de-slicing operations
-        # Implementation: x′(k) ← Deslice(s′, w(k))
-        out_x = torch.einsum("bhgc,bhng->bhnc", out_eidetic_states, slice_weights)
-
-        # Rearrange from multi-head format to batch-first format
-        # Concatenating all heads into a single feature dimension
-        out_x = rearrange(out_x, "b h n d -> b n (h d)")
-
-        # Project concatenated features back to the original dimension
-        return self.to_out(out_x)
+        # Deslice - only use the slice tokens for output
+        out = torch.matmul(slice_weights, updated_slices)  # [B, H, N, G] @ [B, H, G, D] = [B, H, N, D]
+        out = out.transpose(1, 2).reshape(B, N, self.heads * self.dim_head)  # [B, N, C]
+        return self.to_out(out)
