@@ -8,8 +8,9 @@ from tqdm import *
 from utils.testloss import TestLoss
 from model_dict import get_model
 from utils.normalizer import UnitTransformer
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 import time
+import psutil
 
 parser = argparse.ArgumentParser('Training Transformer')
 
@@ -37,6 +38,7 @@ parser.add_argument('--use_wandb', type=int, default=1, help='Whether to use Wei
 parser.add_argument('--wandb_project', type=str, default='PDE-Solving', help='W&B project name')
 parser.add_argument('--wandb_entity', type=str, default=None, help='W&B entity name')
 parser.add_argument('--use_amp', type=int, default=1, help='Whether to use Automatic Mixed Precision')
+parser.add_argument('--max_autotune', action='store_true', help='Use max-autotune mode for model compilation')
 args = parser.parse_args()
 eval = args.eval
 save_name = args.save_name
@@ -54,6 +56,12 @@ def count_parameters(model):
     return total_params
 
 
+def get_memory_usage():
+    """Get current memory usage in MB"""
+    process = psutil.Process(os.getpid())
+    return process.memory_info().rss / 1024 / 1024  # in MB
+
+
 def main():
     # Initialize wandb if enabled
     if args.use_wandb:
@@ -65,7 +73,7 @@ def main():
         )
     
     # Initialize gradient scaler for AMP
-    scaler = GradScaler() if args.use_amp else None
+    scaler = GradScaler('cuda') if args.use_amp else None
     
     ntrain = args.ntrain
     ntest = 200
@@ -91,11 +99,20 @@ def main():
     y_normalizer.cuda()
 
     train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(train_xy, train_xy, train_s),
-                                               batch_size=args.batch_size,
-                                               shuffle=True)
+                                                batch_size=args.batch_size,
+                                                shuffle=True,
+                                                drop_last=True,
+                                                pin_memory=True, 
+                                                num_workers=8,
+                                                persistent_workers=True  # Keep workers alive between epochs
+                                                )
     test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(test_xy, test_xy, test_s),
                                               batch_size=args.batch_size,
-                                              shuffle=False)
+                                              shuffle=False,
+                                              pin_memory=True, 
+                                              num_workers=8,
+                                              persistent_workers=True
+                                              )
 
     print("Dataloading is over.")
 
@@ -113,7 +130,12 @@ def main():
                             unified_pos=args.unified_pos).cuda()
 
     # compile the model, autotuning for performance
-    model = torch.compile(model, mode="max-autotune")
+    if args.max_autotune:
+        print("Compiling model with max-autotune settings.")
+        model = torch.compile(model, mode="max-autotune")
+    else:
+        print("Compiling model with default settings.")
+        model = torch.compile(model)
 
     if args.use_wandb and not eval:
         wandb.watch(model, log_freq=100)
@@ -122,10 +144,26 @@ def main():
 
     print(args)
     print(model)
-    count_parameters(model)
+    total_params = count_parameters(model)
+    
+    # Log model parameters to wandb
+    if args.use_wandb:
+        wandb.log({"model/total_parameters": total_params})
     
     epochs = args.epochs
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
+    # OneCycleLR(
+    # optimizer,
+    # max_lr=1e-3,
+    # steps_per_epoch=len(train_loader),
+    # epochs= epochs,
+    # pct_start=0.3,
+    # anneal_strategy='cos',
+    # div_factor=25.0,
+    # final_div_factor=1e4,
+    # )
+    
+    #
     
     myloss = TestLoss(size_average=False)
 
@@ -138,19 +176,39 @@ def main():
         showcase = 10
         id = 0
 
+        print("Starting evaluation...")
+        eval_pbar = tqdm(test_loader, desc="Evaluation", position=0)
+        
         with torch.no_grad():
-            for pos, fx, y in test_loader:
+            for pos, fx, y in eval_pbar:
                 id += 1
                 x, fx, y = pos.cuda(), fx.cuda(), y.cuda()
                 
                 # Use AMP for inference if enabled
                 use_auto_cast = True if args.use_amp else False
-                with autocast(enabled=use_auto_cast):
+                with autocast('cuda', dtype=torch.bfloat16, enabled=use_auto_cast):
                     out = model(x, None).squeeze(-1)
                     out = y_normalizer.decode(out)
                 
                 tl = myloss(out, y).item()
                 rel_err += tl
+                
+                # Update progress bar
+                eval_pbar.set_postfix({
+                    'rel_err': f'{tl:.6f}',
+                    'avg_rel_err': f'{rel_err/id:.6f}',
+                    'memory_mb': f'{get_memory_usage():.1f}'
+                })
+                
+                # Log batch-level evaluation metrics
+                if args.use_wandb:
+                    wandb.log({
+                        "eval_batch/rel_error": tl,
+                        "eval_batch/avg_rel_error": rel_err/id,
+                        "eval_batch/memory_used_mb": get_memory_usage(),
+                        "eval_batch/sample_id": id
+                    })
+                
                 if id < showcase:
                     print(id)
                     plt.axis('off')
@@ -188,21 +246,33 @@ def main():
         
         # Log evaluation metrics to W&B
         if args.use_wandb:
-            wandb.log({"test/rel_error": rel_err})
+            wandb.log({
+                "test/rel_error": rel_err,
+                "test/memory_used_mb": get_memory_usage()
+            })
+            wandb.finish()
     else:
-        for ep in range(args.epochs):
-
+        print("Starting training...")
+        epoch_pbar = tqdm(range(args.epochs), desc="Epochs", position=0)
+        
+        for ep in epoch_pbar:
+            epoch_start_time = time.time()
             model.train()
             train_loss = 0
+            batch_times = []
 
-            for pos, fx, y in train_loader:
-
-                x, fx, y = pos.cuda(), fx.cuda(), y.cuda()  # x:B,N,2  fx:B,N,2  y:B,N,
+            # Training loop with progress bar
+            train_pbar = tqdm(train_loader, desc=f"Epoch {ep+1}/{args.epochs}", position=1, leave=False)
+            
+            for batch_idx, (pos, fx, y) in enumerate(train_pbar):
+                batch_start_time = time.time()
+                
+                x, fx, y = pos.cuda(), fx.cuda(), y.cuda()
                 optimizer.zero_grad()
                 
                 # Use AMP for training if enabled
                 use_auto_cast = True if args.use_amp else False
-                with autocast(enabled=use_auto_cast): # added autocast
+                with autocast('cuda', dtype=torch.bfloat16, enabled=use_auto_cast):
                     out = model(x, None).squeeze(-1)
                     out = y_normalizer.decode(out)
                     y = y_normalizer.decode(y)
@@ -224,42 +294,91 @@ def main():
                     
                 train_loss += loss.item()
                 scheduler.step()
+                
+                batch_time = time.time() - batch_start_time
+                batch_times.append(batch_time)
+                
+                # Update training progress bar
+                current_lr = scheduler.get_last_lr()[0]
+                train_pbar.set_postfix({
+                    'loss': f'{loss.item():.6f}',
+                    'lr': f'{current_lr:.2e}',
+                    'mem_mb': f'{get_memory_usage():.1f}',
+                    'batch_time': f'{batch_time:.3f}s'
+                })
+                
+                # Log batch-level metrics every 10 batches
+                if args.use_wandb and batch_idx % 10 == 0:
+                    wandb.log({
+                        "batch/loss": loss.item(),
+                        "batch/learning_rate": current_lr,
+                        "batch/memory_used_mb": get_memory_usage(),
+                        "batch/batch_time": batch_time,
+                        "batch/epoch": ep,
+                        "batch/batch_idx": batch_idx
+                    })
 
             train_loss = train_loss / ntrain
-            print("Epoch {} Train loss : {:.5f}".format(ep, train_loss))
-
+            epoch_time = time.time() - epoch_start_time
+            
+            # Evaluation
             model.eval()
             rel_err = 0.0
+            val_start_time = time.time()
+            
             with torch.no_grad():
-                for pos, fx, y in test_loader:
+                val_pbar = tqdm(test_loader, desc="Validation", position=1, leave=False)
+                for pos, fx, y in val_pbar:
                     x, fx, y = pos.cuda(), fx.cuda(), y.cuda()
                     
                     # Use AMP for evaluation
                     use_auto_cast = True if args.use_amp else False
-                    with autocast(enabled=use_auto_cast): # added autocast
+                    with autocast('cuda', dtype=torch.bfloat16, enabled=use_auto_cast):
                         out = model(x, None).squeeze(-1)
                         out = y_normalizer.decode(out)
                     
                     tl = myloss(out, y).item()
                     rel_err += tl
+                    
+                    val_pbar.set_postfix({
+                        'val_loss': f'{tl:.6f}',
+                        'avg_val_loss': f'{rel_err/(val_pbar.n+1):.6f}'
+                    })
 
             rel_err /= ntest
-            print("rel_err : {}".format(rel_err))
+            val_time = time.time() - val_start_time
             
-            # Log metrics to wandb
+            # Update epoch progress bar
+            epoch_pbar.set_postfix({
+                'train_loss': f'{train_loss:.6f}',
+                'val_loss': f'{rel_err:.6f}',
+                'lr': f'{scheduler.get_last_lr()[0]:.2e}',
+                'epoch_time': f'{epoch_time:.1f}s'
+            })
+            
+            print("Epoch {} Train loss : {:.5f}, Val loss : {:.5f}".format(ep, train_loss, rel_err))
+            
+            # Log epoch metrics to wandb
             if args.use_wandb:
                 wandb.log({
-                    "train/loss": train_loss,
-                    "test/rel_error": rel_err,
-                    "epoch": ep,
-                    "learning_rate": scheduler.get_last_lr()[0]
+                    "epoch/train_loss": train_loss,
+                    "epoch/val_loss": rel_err,
+                    "epoch/learning_rate": scheduler.get_last_lr()[0],
+                    "epoch/epoch_time": epoch_time,
+                    "epoch/val_time": val_time,
+                    "epoch/avg_batch_time": np.mean(batch_times) if batch_times else 0,
+                    "epoch/memory_used_mb": get_memory_usage(),
+                    "epoch/epoch": ep
                 })
 
             if ep % 100 == 0:
                 if not os.path.exists('./checkpoints'):
                     os.makedirs('./checkpoints')
                 print('save model')
-                torch.save(model.state_dict(), os.path.join('./checkpoints', save_name + '.pt'))
+                checkpoint_path = os.path.join('./checkpoints', save_name + '.pt')
+                torch.save(model.state_dict(), checkpoint_path)
+                if args.use_wandb:
+                    wandb.save(checkpoint_path)
 
         if not os.path.exists('./checkpoints'):
             os.makedirs('./checkpoints')
@@ -270,6 +389,12 @@ def main():
         # Save final model to wandb and finish session
         if args.use_wandb:
             wandb.save(final_checkpoint_path)
+            wandb.log({
+                "final/train_loss": train_loss,
+                "final/val_loss": rel_err,
+                "final/total_parameters": total_params,
+                "final/epochs_completed": args.epochs
+            })
             wandb.finish()
 
 
@@ -277,4 +402,9 @@ if __name__ == "__main__":
     start_time = time.time()
     main()
     end_time = time.time()
-    print("Total time: {:.2f} seconds".format(end_time - start_time))
+    total_time = end_time - start_time
+    print("Total time: {:.2f} seconds".format(total_time))
+    
+    # Log total time to wandb if enabled
+    if args.use_wandb:
+        wandb.log({"final/total_time_seconds": total_time})
