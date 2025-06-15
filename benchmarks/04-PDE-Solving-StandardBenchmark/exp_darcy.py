@@ -25,7 +25,7 @@ parser.add_argument('--n-hidden', type=int, default=64, help='hidden dim')
 parser.add_argument('--n-layers', type=int, default=3, help='layers')
 parser.add_argument('--n-heads', type=int, default=4)
 parser.add_argument('--batch-size', type=int, default=8)
-parser.add_argument("--gpu", type=str, default='1', help="GPU index to use")
+parser.add_argument("--gpu", type=str, default='0', help="GPU index to use")
 parser.add_argument('--max_grad_norm', type=float, default=None)
 parser.add_argument('--downsample', type=int, default=5)
 parser.add_argument('--mlp_ratio', type=int, default=1)
@@ -36,7 +36,7 @@ parser.add_argument('--ref', type=int, default=8)
 parser.add_argument('--slice_num', type=int, default=32)
 parser.add_argument('--eval', type=int, default=0)
 parser.add_argument('--save_name', type=str, default='darcy_Transolver')
-parser.add_argument('--data_path', type=str, default='/data/fno')
+parser.add_argument('--data_path', type=str, default='./data/Darcy_421')
 parser.add_argument('--use_wandb', type=int, default=1, help='Whether to use Weights & Biases logging')
 parser.add_argument('--wandb_project', type=str, default='PDE-Solving', help='W&B project name')
 parser.add_argument('--wandb_entity', type=str, default=None, help='W&B entity name')
@@ -151,7 +151,7 @@ def main():
                                               num_workers=8,
                                               persistent_workers=True)
 
-    model = get_model(args).Model(space_dim=2,
+    model = get_model(args)(space_dim=2,
                                   n_layers=args.n_layers,
                                   n_hidden=args.n_hidden,
                                   dropout=args.dropout,
@@ -294,7 +294,7 @@ def main():
             batch_times = []
 
             # Training loop with progress bar
-            train_pbar = tqdm(train_loader, desc=f"Epoch {ep+1}/{args.epochs}", position=1, leave=False)
+            train_pbar = tqdm(train_loader, desc=f"Epoch {ep+1}/{args.epochs}", position=1, leave=False, disable=True)
             
             for batch_idx, (x, fx, y) in enumerate(train_pbar):
                 batch_start_time = time.time()
@@ -375,7 +375,7 @@ def main():
             val_start_time = time.time()
             
             with torch.no_grad():
-                val_pbar = tqdm(test_loader, desc="Validation", position=1, leave=False)
+                val_pbar = tqdm(test_loader, desc="Validation", position=1, leave=False, disable=True)
                 for x, fx, y in val_pbar:
                     id += 1
                     if id == 2:
@@ -432,7 +432,7 @@ def main():
                     os.makedirs('./checkpoints')
                 print('save model')
                 checkpoint_path = os.path.join('./checkpoints', save_name + '.pt')
-                torch.save(model.state_dict(), checkpoint_path)
+                # torch.save(model.state_dict(), checkpoint_path)
                 if args.use_wandb:
                     wandb.save(checkpoint_path)
 
@@ -440,7 +440,7 @@ def main():
             os.makedirs('./checkpoints')
         print('save model')
         final_checkpoint_path = os.path.join('./checkpoints', save_name + '.pt')
-        torch.save(model.state_dict(), final_checkpoint_path)
+        # torch.save(model.state_dict(), final_checkpoint_path)
         
         # Save final model to wandb and finish session
         if args.use_wandb:
