@@ -4,7 +4,7 @@
 #SBATCH --gpus=1
 #SBATCH --job-name=ns
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=9
 #SBATCH --time=40:00:00
 #SBATCH --output=slurm_output/slurm_output_NS_training_%A.out
 
@@ -34,16 +34,17 @@ echo "Running experiment on Navier Stokes dataset"
 
 srun python exp_ns.py \
     --model HAETransolver_Structured_Mesh_2D \
-    --n-hidden 256 \
     --n-heads 8 \
     --n-layers 8 \
     --lr 0.001 \
-    --batch-size 2 \
+    --batch-size 8 \
+    --n-hidden 256 \
     --slice_num 32 \
-    --unified_pos 1 \
+    --unified_pos 0 \
     --ref 8 \
     --eval 0 \
-    --save_name ns_HAETransolver
+    --use_wandb 1 \
+    --save_name ns_HAETransolver_256_32_4_not_2
 
 echo "Experiment completed. Check the output files for results."
 

@@ -34,16 +34,18 @@ echo "Running experiment on Elasticity dataset"
 
 srun python exp_elas.py \
     --model HAETransolver_Irregular_Mesh \
-    --n-hidden 128 \
+    --epochs 500 \
     --n-heads 8 \
     --n-layers 8 \
     --lr 0.001 \
     --max_grad_norm 0.1 \
-    --batch-size 1 \
-    --slice_num 128 \
+    --batch-size 16 \
+    --n-hidden 256 \
+    --slice_num 1024 \
     --unified_pos 0 \
     --ref 8 \
     --eval 0 \
-    --save_name elas_HAETransolver_128
+    --use_wandb 1 \
+    --save_name HAET_Elas_1024
 
 echo "Experiment completed. Check the output files for results."

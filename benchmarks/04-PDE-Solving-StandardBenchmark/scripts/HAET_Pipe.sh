@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_a100
+#SBATCH --partition=gpu_h100
 #SBATCH --gpus=1
 #SBATCH --job-name=pipe
 #SBATCH --ntasks=1
@@ -34,17 +34,18 @@ echo "Running experiment on Pipe dataset"
 
 srun python exp_pipe.py \
     --model HAETransolver_Structured_Mesh_2D \
-    --n-hidden 128 \
     --n-heads 8 \
     --n-layers 8 \
     --mlp_ratio 2 \
     --lr 0.001 \
     --max_grad_norm 0.1 \
-    --batch-size 8 \
-    --slice_num 64 \
+    --batch-size 4 \
+    --n-hidden 256 \
+    --slice_num 256 \
     --unified_pos 0 \
     --ref 8 \
-    --eval 1 \
-    --save_name pipe_HAETransolver
+    --eval 0 \
+    --use_wandb 1 \
+    --save_name HAET_Pipe_256
 
 echo "Experiment completed. Check the output files for results."
