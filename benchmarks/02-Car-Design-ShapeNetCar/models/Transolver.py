@@ -34,16 +34,25 @@ class ErwinTransolver(nn.Module):
         self.dimensionality = dimensionality
         self.epsilon = epsilon
         self.radius = radius    # Store the radius parameter
+        self.memory_tokens = self.slice_num // 32
+
+        # Memory tokens - learnable parameters
+        self.memory_states = nn.Parameter(torch.randn(1, heads, self.memory_tokens, dim_head))
+        init_pos = self.uniform_memory_positions(heads, self.memory_tokens, dimensionality).clone()
+        self.memory_positions = nn.Parameter(init_pos)
+        
+        # Initialize memory tokens
+        nn.init.xavier_uniform_(self.memory_states)
         
         # Input projections for slicing (just x, not fx to save 50% memory as per algorithm)
         self.in_project_x = nn.Linear(dim, inner_dim)
 
         # Input positions for slicing - learn position representations
-        self.pos_projector = nn.Sequential(
-            nn.Linear(dimensionality, dimensionality * heads),
-            nn.GELU(),
-            nn.Linear(dimensionality * heads, heads * self.dimensionality),
-        )
+        # self.pos_projector = nn.Sequential(
+        #     nn.Linear(dimensionality, dimensionality * heads),
+        #     nn.GELU(),
+        #     nn.Linear(dimensionality * heads, heads * self.dimensionality),
+        # )
         
         # Rep-Slice projection
         self.in_project_slice = nn.Linear(dim_head, slice_num)
@@ -81,6 +90,21 @@ class ErwinTransolver(nn.Module):
         
         # Initialize slice weights attribute
         self.slice_weights = None
+    
+    def uniform_memory_positions(self, heads, memory_tokens, dimensionality):
+        grid = torch.linspace(0, 1, steps=memory_tokens)
+        if dimensionality == 1:
+            base = grid
+        elif dimensionality == 2:
+            base = torch.stack(torch.meshgrid(grid, grid, indexing="ij"), dim=-1).view(-1, 2)
+        elif dimensionality == 3:
+            base = torch.stack(torch.meshgrid(grid, grid, grid, indexing="ij"), dim=-1).view(-1, 3)
+        else:
+            raise ValueError("Unsupported dimensionality")
+
+        base = base[:memory_tokens]  # Ensure size
+        base = base.unsqueeze(0).unsqueeze(0).expand(1, heads, -1, -1)  # [1, H, M, D]
+        return base
 
     def gumbel_softmax_sample(self, logits, tau, training=True):
         """Gumbel-Softmax sampling as in Eq. (4)"""
@@ -99,7 +123,7 @@ class ErwinTransolver(nn.Module):
 
         # Project input
         x_proj = self.in_project_x(x).view(B, N, self.heads, self.dim_head).transpose(1, 2)  # [B, H, N, D]
-        pos_proj = self.pos_projector(pos).view(B, N, self.heads, self.dimensionality).transpose(1, 2)  # [B, H, N, D]
+        pos_proj = pos.view(B, N, 1, self.dimensionality).expand(B, N, self.heads, self.dimensionality).transpose(1, 2)  # [B, H, N, D]
 
         # Adaptive temperature
         tau = torch.clamp(self.base_temp + self.ada_temp_linear(self.ada_temp_norm(x_proj)), min=0.1, max=2.0)
@@ -118,18 +142,32 @@ class ErwinTransolver(nn.Module):
         eidetic_states = torch.matmul(slice_weights.transpose(-2, -1), x_proj) / (norm.transpose(-1, -2) + 1e-3)  # Increased epsilon
         eidetic_pos = torch.matmul(slice_weights.transpose(-2, -1), pos_proj) / (norm.transpose(-1, -2) + 1e-3)
 
-        # Prepare for Erwin
-        B, H, G, D = eidetic_states.shape
-        states_flat = eidetic_states.reshape(B * H * G, D)
-        pos_flat = eidetic_pos.reshape(B * H * G, self.dimensionality)
-        batch_idx = torch.arange(B * H, device=x.device).repeat_interleave(G)
+        ### Add memory tokens to eidetic states
+        # Expand memory tokens to match batch size
+        memory_states_expanded = self.memory_states.expand(B, -1, -1, -1)  # [B, H, M, D]
+        memory_pos_expanded = self.memory_positions.expand(B, -1, -1, -1)  # [B, H, M, D_pos]
+        
+        # Concatenate memory tokens with eidetic states
+        eidetic_states = torch.cat([eidetic_states, memory_states_expanded], dim=2)  # [B, H, G+M, D]
+        eidetic_pos = torch.cat([eidetic_pos, memory_pos_expanded], dim=2)  # [B, H, G+M, D_pos]
+
+        ### (2) Transform eidetic states with ErwinTransformer
+        # Prepare for Erwin - now includes memory tokens
+        B, H, G_plus_M, D = eidetic_states.shape
+        states_flat = eidetic_states.reshape(B * H * G_plus_M, D)
+        pos_flat = eidetic_pos.reshape(B * H * G_plus_M, self.dimensionality)
+        batch_idx = torch.arange(B * H, device=x.device).repeat_interleave(G_plus_M)
 
         # Erwin attention
         updated = self.erwin(states_flat, pos_flat, batch_idx, radius=self.radius)
-        updated = updated.view(B, H, G, D)
+        updated = updated.view(B, H, G_plus_M, D)
+        
+        # Split back into slice tokens and memory tokens
+        updated_slices = updated[:, :, :self.slice_num, :]  # [B, H, G, D]
+        updated_memory = updated[:, :, self.slice_num:, :]  # [B, H, M, D]
 
-        # Deslice
-        out = torch.matmul(slice_weights, updated)  # [B, H, N, G] @ [B, H, G, D] = [B, H, N, D]
+        # Deslice - only use the slice tokens for output
+        out = torch.matmul(slice_weights, updated_slices)  # [B, H, N, G] @ [B, H, G, D] = [B, H, N, D]
         out = out.transpose(1, 2).reshape(B, N, self.heads * self.dim_head)  # [B, N, C]
         return self.to_out(out)
 
