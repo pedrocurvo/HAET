@@ -124,11 +124,11 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
         self.in_project_x = nn.Conv2d(dim, inner_dim, kernel, 1, kernel // 2)
 
         # Input positions for slicing - learn position representations
-        self.pos_projector = nn.Sequential(
-            nn.Linear(dimensionality, dimensionality * heads),
-            nn.GELU(),
-            nn.Linear(dimensionality * heads, heads * self.dimensionality),
-        )
+        # self.pos_projector = nn.Sequential(
+        #     nn.Linear(dimensionality, dimensionality * heads),
+        #     nn.GELU(),
+        #     nn.Linear(dimensionality * heads, heads * self.dimensionality),
+        # )
         
         # Rep-Slice projection
         self.in_project_slice = nn.Linear(dim_head, slice_num)
@@ -239,7 +239,7 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
             .contiguous()
         )
 
-        pos_proj = self.pos_projector(pos).view(B, N, self.heads, self.dimensionality).transpose(1, 2)  # [B, H, N, D]
+        pos_proj = pos.view(B, N, 1, self.dimensionality).expand(B, N, self.heads, self.dimensionality).transpose(1, 2)
 
         # Adaptive temperature
         tau = torch.clamp(self.base_temp + self.ada_temp_linear(self.ada_temp_norm(x_proj)), min=0.1, max=2.0)
