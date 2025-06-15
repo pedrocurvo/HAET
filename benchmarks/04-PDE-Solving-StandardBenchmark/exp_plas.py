@@ -332,7 +332,7 @@ def main():
             batch_times = []
 
             # Training loop with progress bar
-            train_pbar = tqdm(train_loader, desc=f"Epoch {ep+1}/{args.epochs}", position=1, leave=False)
+            train_pbar = tqdm(train_loader, desc=f"Epoch {ep+1}/{args.epochs}", position=1, leave=False, disable=True)
             
             for batch_idx, (x, tim, fx, yy) in enumerate(train_pbar):
                 batch_start_time = time.time()
@@ -398,7 +398,7 @@ def main():
             val_start_time = time.time()
             
             with torch.no_grad():
-                val_pbar = tqdm(test_loader, desc="Validation", position=1, leave=False)
+                val_pbar = tqdm(test_loader, desc="Validation", position=1, leave=False, disable=True)
                 for x, tim, fx, yy in val_pbar:
                     loss = 0
                     x, fx, tim, yy = x.cuda(), fx.cuda(), tim.cuda(), yy.cuda()
@@ -461,7 +461,7 @@ def main():
                     os.makedirs('./checkpoints')
                 print('save model')
                 checkpoint_path = os.path.join('./checkpoints', save_name + '.pt')
-                torch.save(model.state_dict(), checkpoint_path)
+                # torch.save(model.state_dict(), checkpoint_path)
                 if args.use_wandb:
                     wandb.save(checkpoint_path)
 
@@ -469,7 +469,7 @@ def main():
             os.makedirs('./checkpoints')
         print('save model')
         final_checkpoint_path = os.path.join('./checkpoints', save_name + '.pt')
-        torch.save(model.state_dict(), final_checkpoint_path)
+        # torch.save(model.state_dict(), final_checkpoint_path)
         
         # Save final model to wandb and finish session
         if args.use_wandb:
