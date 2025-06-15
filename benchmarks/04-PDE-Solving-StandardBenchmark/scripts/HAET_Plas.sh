@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_a100
+#SBATCH --partition=gpu_h100
 #SBATCH --gpus=1
-#SBATCH --job-name=airfoil
+#SBATCH --job-name=plasticity
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=20:00:00
-#SBATCH --output=slurm_output/slurm_output_airfoil_training_64_%A.out
+#SBATCH --time=80:00:00
+#SBATCH --output=slurm_output/slurm_output_plasticity_training_%A.out
 
 module purge
 module load 2024
@@ -14,7 +14,7 @@ module load Anaconda3/2024.06-1
 module load 2023
 module load CUDA/12.4.0
 
-cd $HOME/HAET/benchmarks/04-PDE-Solving-StandardBenchmark
+cd $HOME/HAET/benchmarks/04-PDE-Solving-StandardBenchmark || exit 1 # Change to your working directory
 
 # # unninstall torch and torchvision if they exist
 # srun pip uninstall -y torch torchvision torchaudio torch-cluster torch-scatter
@@ -30,20 +30,22 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-echo "Running experiment on Airfoil dataset"
+echo "Running experiment on Plasticity dataset"
 
-srun python exp_airfoil.py \
+srun python exp_plas.py \
     --model HAETransolver_Structured_Mesh_2D \
-    --n-hidden 128 \
     --n-heads 8 \
     --n-layers 8 \
     --lr 0.001 \
     --max_grad_norm 0.1 \
-    --batch-size 4 \
-    --slice_num 64 \
+    --batch-size 8 \
+    --n-hidden 256 \
+    --slice_num 512 \
     --unified_pos 0 \
     --ref 8 \
     --eval 0 \
-    --save_name airfoil_HAETransolver
+    --use_wandb 1 \
+    --save_name HAET_Plas_512
 
 echo "Experiment completed. Check the output files for results."
+

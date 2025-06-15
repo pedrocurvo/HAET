@@ -17,19 +17,18 @@ module load CUDA/12.4.0
 cd $HOME/HAET/benchmarks/04-PDE-Solving-StandardBenchmark
 
 
-srun python exp_darcy2.py \
+srun python exp_darcy.py \
     --model HAETransolver_Structured_Mesh_2D \
-    --n-hidden 128 \
-    --use_wandb 0 \
     --n-heads 8 \
     --n-layers 8 \
     --lr 0.001 \
     --max_grad_norm 0.1 \
     --batch-size 4 \
-    --slice_num 64 \
+    --n-hidden 256 \
+    --slice_num 1024 \
     --unified_pos 1 \
     --ref 8 \
-    --eval 1 \
+    --eval 0 \
+    --use_wandb 1 \
     --downsample 5 \
-
-    --save_name darcy_UniPDE
+    --save_name HAET_Darcy_1024
