@@ -39,18 +39,18 @@ class BallMSA(nn.Module):
         pos = pos.view(num_balls, self.ball_size, dim)
         return (pos - pos.mean(dim=1, keepdim=True)).view(-1, dim)
 
-    def forward(self, x: torch.Tensor, pos: torch.Tensor):
-        qkv_weight = self.qkv.weight.to(torch.float16)
+    def forward(self, x: torch.Tensor, pos: torch.Tensor, dtype: torch.dtype = torch.bfloat16):
+        qkv_weight = self.qkv.weight.to(dtype)
         qkv_bias = (
-            self.qkv.bias.to(torch.float16) if self.qkv.bias is not None else None
+            self.qkv.bias.to(dtype) if self.qkv.bias is not None else None
         )
-        proj_weight = self.proj.weight.to(torch.float16)
+        proj_weight = self.proj.weight.to(dtype)
         proj_bias = (
-            self.proj.bias.to(torch.float16) if self.proj.bias is not None else None
+            self.proj.bias.to(dtype) if self.proj.bias is not None else None
         )
-        pe_weight = self.pe_proj.weight.to(torch.float16)
+        pe_weight = self.pe_proj.weight.to(dtype)
         pe_bias = (
-            self.pe_proj.bias.to(torch.float16)
+            self.pe_proj.bias.to(dtype)
             if self.pe_proj.bias is not None
             else None
         )
