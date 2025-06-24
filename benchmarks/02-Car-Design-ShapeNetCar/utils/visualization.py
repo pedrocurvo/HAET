@@ -5,6 +5,8 @@
 # 3. Individual slice visualizations
 # 4. Heatmaps of weights across the car model
 # 5. 2D projections onto different planes
+# 6. Connected surface mesh with slice coloring 
+# 7. KNN-based outlier removal for cleaner visualizations 
 
 import os
 import torch
@@ -15,6 +17,188 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.colors import Normalize
 from torch.cuda.amp import autocast
 import matplotlib.tri as mtri
+import open3d as o3d
+from sklearn.neighbors import NearestNeighbors
+from collections import Counter
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
+
+def remove_outliers_knn(points, k=10, threshold_multiplier=2.5):
+    """
+    Remove outlier points using k-nearest neighbors distance metric.
+    
+    This function computes the average distance to k nearest neighbors for each point
+    and removes points whose average distance exceeds a threshold based on the 
+    distribution of all average distances. The threshold is tuned to be conservative,
+    removing only true outliers while preserving valid car geometry.
+    
+    Args:
+        points (np.array): Array of 3D points, shape [N, 3]
+        k (int): Number of nearest neighbors to consider (default: 10)
+        threshold_multiplier (float): Multiplier for threshold calculation.
+                                    Threshold = mean + threshold_multiplier * std
+                                    Higher values = more conservative (fewer removals)
+                                    (default: 2.5)
+    
+    Returns:
+        tuple: (filtered_points, inlier_mask)
+            - filtered_points: Points with outliers removed
+            - inlier_mask: Boolean mask indicating which points were kept
+    """
+    if len(points) <= k:
+        # Not enough points for KNN, return all points
+        return points, np.ones(len(points), dtype=bool)
+    
+    # Fit KNN model
+    knn = NearestNeighbors(n_neighbors=k+1)  # +1 because each point is its own nearest neighbor
+    knn.fit(points)
+    
+    # Find distances to k nearest neighbors for each point
+    distances, indices = knn.kneighbors(points)
+    
+    # Exclude self (first column) and compute average distance to k neighbors
+    neighbor_distances = distances[:, 1:]  # Exclude self-distance (always 0)
+    avg_distances = np.mean(neighbor_distances, axis=1)
+    
+    # Compute threshold based on the distribution of average distances
+    mean_dist = np.mean(avg_distances)
+    std_dist = np.std(avg_distances)
+    threshold = mean_dist + threshold_multiplier * std_dist
+    
+    # Create mask for inliers (points to keep)
+    inlier_mask = avg_distances <= threshold
+    
+    # Filter points
+    filtered_points = points[inlier_mask]
+    
+    print(f"Outlier removal: {len(points)} -> {len(filtered_points)} points "
+          f"({len(points) - len(filtered_points)} outliers removed, "
+          f"{100 * len(filtered_points) / len(points):.1f}% retained)")
+    
+    return filtered_points, inlier_mask
+
+
+def create_complete_car_mesh_with_colored_slices(points, slice_weights, output_path):
+    """
+    For each slice, creates a visualization of the car's surface mesh.
+    The part of the mesh corresponding to the slice is colored yellow, and the rest is blue.
+    Uses advanced surface reconstruction (Poisson/Ball Pivoting) with lighting effects.
+
+    Args:
+        points (np.array): The 3D point cloud of the car [N, 3].
+        slice_weights (np.array): The slice weights for each point [N, num_slices].
+        output_path (str): The base path to save the visualizations.
+    """
+    # 1. Determine the dominant slice for each point
+    dominant_slice_indices = np.argmax(slice_weights, axis=1)
+    num_slices = slice_weights.shape[1]
+
+    # 2. Create an Open3D point cloud object
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
+
+    # 3. Estimate normals and create a mesh
+    pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30))
+    pcd.orient_normals_consistent_tangent_plane(100)
+
+    mesh = None
+    try:
+        mesh, _ = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=9)
+        bbox = pcd.get_axis_aligned_bounding_box()
+        mesh = mesh.crop(bbox)
+        print("Poisson Reconstruction successful.")
+    except Exception as e:
+        print(f"Poisson Reconstruction failed: {e}. Falling back to Ball Pivoting.")
+        try:
+            radii = [0.05, 0.1, 0.2, 0.4]
+            mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
+                pcd, o3d.utility.DoubleVector(radii))
+            print("Ball Pivoting successful.")
+        except Exception as e_bp:
+            print(f"Ball Pivoting also failed: {e_bp}. Aborting.")
+            return
+
+    if not mesh or len(mesh.vertices) == 0:
+        print("Mesh creation failed.")
+        return
+
+    mesh.remove_degenerate_triangles()
+    mesh.remove_duplicated_triangles()
+    mesh.remove_duplicated_vertices()
+    mesh.remove_non_manifold_edges()
+
+    # 4. Map mesh vertices to dominant slices
+    kdtree = o3d.geometry.KDTreeFlann(pcd)
+    mesh_vertices = np.asarray(mesh.vertices)
+    mesh_vertex_dominant_slice = np.zeros(len(mesh_vertices), dtype=int)
+    for i, vert in enumerate(mesh_vertices):
+        [k, idx, _] = kdtree.search_knn_vector_3d(vert, 1)
+        if k > 0:
+            mesh_vertex_dominant_slice[i] = dominant_slice_indices[idx[0]]
+
+    # 5. For each slice, generate a colored mesh visualization
+    triangles = np.asarray(mesh.triangles)
+    for slice_idx in range(num_slices):
+        face_colors = np.zeros((len(triangles), 3))
+        blue_color = np.array([0.2, 0.4, 0.8])  # A nice blue
+        yellow_color = np.array([1.0, 1.0, 0.0])
+
+        for i, tri in enumerate(triangles):
+            slices_for_tri = mesh_vertex_dominant_slice[tri]
+            if len(slices_for_tri) > 0:
+                majority_slice = Counter(slices_for_tri).most_common(1)[0][0]
+                face_colors[i] = yellow_color if majority_slice == slice_idx else blue_color
+            else:
+                face_colors[i] = [0.5, 0.5, 0.5]  # Gray for triangles with no slice info
+
+        # 6. Plotting with enhanced lighting
+        fig = plt.figure(figsize=(12, 9))
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Define a light source to calculate shading
+        light_source = np.array([1.0, 1.0, 1.0])
+        light_source = light_source / np.linalg.norm(light_source)
+
+        # Calculate face normals and apply shading
+        mesh.compute_triangle_normals()
+        face_normals = np.asarray(mesh.triangle_normals)
+        shading = np.dot(face_normals, light_source)
+        shading = 0.3 + 0.7 * np.clip(shading, 0, 1)  # Enhanced contrast for better visibility
+        shaded_face_colors = face_colors * shading[:, np.newaxis]
+
+        mesh_polys = mesh_vertices[triangles]
+        collection = Poly3DCollection(mesh_polys, facecolors=shaded_face_colors, edgecolors='k', linewidths=0.05, alpha=1.0)
+        ax.add_collection3d(collection)
+
+        ax.set_title(f'Car Mesh - Slice {slice_idx} Highlighted')
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+        # Set proper aspect ratio to avoid cubic appearance
+        x_lims = [np.min(mesh_vertices[:, 0]), np.max(mesh_vertices[:, 0])]
+        y_lims = [np.min(mesh_vertices[:, 1]), np.max(mesh_vertices[:, 1])]
+        z_lims = [np.min(mesh_vertices[:, 2]), np.max(mesh_vertices[:, 2])]
+        x_range = x_lims[1] - x_lims[0]
+        y_range = y_lims[1] - y_lims[0]
+        z_range = z_lims[1] - z_lims[0]
+        max_range = max(x_range, y_range, z_range)
+        x_mid = np.mean(x_lims)
+        y_mid = np.mean(y_lims)
+        z_mid = np.mean(z_lims)
+        ax.set_xlim(x_mid - max_range / 2, x_mid + max_range / 2)
+        ax.set_ylim(y_mid - max_range / 2, y_mid + max_range / 2)
+        ax.set_zlim(z_mid - max_range / 2, z_mid + max_range / 2)
+
+        ax.view_init(elev=20, azim=300)
+        ax.grid(False)
+        fig.patch.set_facecolor('white')
+        plt.tight_layout()
+
+        slice_output_path = output_path.replace('.png', f'_slice_{slice_idx}.png')
+        plt.savefig(slice_output_path, dpi=300)
+        plt.close()
+        print(f"Saved slice visualization to {slice_output_path}")
 
 
 def visualize_car_and_slices(sample_idx, results_dir, model, dataset, args=None):
@@ -59,6 +243,17 @@ def visualize_car_and_slices(sample_idx, results_dir, model, dataset, args=None)
     pos = data.pos[surf_indices].cpu().numpy()
     pos = pos[:, [0, 2, 1]]  # Swap Y and Z for better visualization (standard convention)
 
+    # Apply robust outlier removal to clean up the visualization
+    # Use conservative parameters to ensure only true outliers are removed
+    pos_clean, inlier_mask = remove_outliers_knn(
+        pos, 
+        k=10,  # Consider 10 nearest neighbors
+        threshold_multiplier=4  # Conservative threshold (mean + 2.5*std)
+    )
+    
+    # Update surf_indices to reflect the outlier removal
+    surf_indices_clean = surf_indices[inlier_mask]
+
     # Helper function to ensure 3D plots have equal scaling on all axes
     def set_axes_equal(ax):
         """
@@ -86,8 +281,7 @@ def visualize_car_and_slices(sample_idx, results_dir, model, dataset, args=None)
     # === Plot full car mesh ===
     fig = plt.figure(figsize=(12, 10))
     ax1 = fig.add_subplot(211, projection='3d')
-    ax1.scatter(pos[:, 0], pos[:, 1], pos[:, 2], s=5, c='gray', alpha=0.8)
-    ax1.set_title(f'Full Car Mesh - Sample {sample_idx}')
+    ax1.scatter(pos_clean[:, 0], pos_clean[:, 1], pos_clean[:, 2], s=5, c='gray', alpha=0.8)
     ax1.set_xlabel('X')
     ax1.set_ylabel('Y')
     ax1.set_zlabel('Z')
@@ -115,12 +309,12 @@ def visualize_car_and_slices(sample_idx, results_dir, model, dataset, args=None)
             print(f"avg_weights shape after transpose: {avg_weights.shape}")
         
         # Select only surface points for visualization with safety check
-        if np.max(surf_indices) >= avg_weights.shape[0]:
-            print(f"WARNING: surf_indices max value {np.max(surf_indices)} exceeds avg_weights dimension {avg_weights.shape[0]}")
+        if np.max(surf_indices_clean) >= avg_weights.shape[0]:
+            print(f"WARNING: surf_indices_clean max value {np.max(surf_indices_clean)} exceeds avg_weights dimension {avg_weights.shape[0]}")
             print(f"Using all weights without surface-point filtering")
             surf_weights = avg_weights
         else:
-            surf_weights = avg_weights[surf_indices, :]
+            surf_weights = avg_weights[surf_indices_clean, :]
         print(f"surf_weights shape: {surf_weights.shape}")
     elif len(weights.shape) == 3:  # Alternative format: [B, N, G] (Batch, Points, Slices)
         print("Processing [B, N, G] shaped weights")
@@ -134,12 +328,12 @@ def visualize_car_and_slices(sample_idx, results_dir, model, dataset, args=None)
             print(f"avg_weights shape after transpose: {avg_weights.shape}")
             
         # Safety check for surface point filtering
-        if np.max(surf_indices) >= avg_weights.shape[0]:
-            print(f"WARNING: surf_indices max value {np.max(surf_indices)} exceeds avg_weights dimension {avg_weights.shape[0]}")
+        if np.max(surf_indices_clean) >= avg_weights.shape[0]:
+            print(f"WARNING: surf_indices_clean max value {np.max(surf_indices_clean)} exceeds avg_weights dimension {avg_weights.shape[0]}")
             print(f"Using all weights without surface-point filtering")
             surf_weights = avg_weights
         else:
-            surf_weights = avg_weights[surf_indices, :]
+            surf_weights = avg_weights[surf_indices_clean, :]
         print(f"surf_weights shape: {surf_weights.shape}")
     else:
         # Fallback for unexpected weight shapes - try to infer the right structure
@@ -152,12 +346,12 @@ def visualize_car_and_slices(sample_idx, results_dir, model, dataset, args=None)
         print(f"Reshaped avg_weights shape: {avg_weights.shape}")
         
         # Safety check for surface point filtering
-        if np.max(surf_indices) >= avg_weights.shape[0]:
-            print(f"WARNING: surf_indices max value {np.max(surf_indices)} exceeds avg_weights dimension {avg_weights.shape[0]}")
+        if np.max(surf_indices_clean) >= avg_weights.shape[0]:
+            print(f"WARNING: surf_indices_clean max value {np.max(surf_indices_clean)} exceeds avg_weights dimension {avg_weights.shape[0]}")
             print(f"Using all weights without surface-point filtering")
             surf_weights = avg_weights
         else:
-            surf_weights = avg_weights[surf_indices, :]
+            surf_weights = avg_weights[surf_indices_clean, :]
         print(f"surf_weights shape: {surf_weights.shape}")
     
     # Find the most important slices based on total weight across points
@@ -172,7 +366,7 @@ def visualize_car_and_slices(sample_idx, results_dir, model, dataset, args=None)
     for i, slice_idx in enumerate(top_slices):
         slice_weight = surf_weights[:, slice_idx]
         scatter = ax2.scatter(
-            pos[:, 0], pos[:, 1], pos[:, 2],
+            pos_clean[:, 0], pos_clean[:, 1], pos_clean[:, 2],
             s=10,
             c=slice_weight,
             cmap=cmaps[i % len(cmaps)],
@@ -215,7 +409,7 @@ def visualize_car_and_slices(sample_idx, results_dir, model, dataset, args=None)
                                 np.ones_like(slice_weight), 
                                 np.zeros_like(slice_weight))
         scatter = ax.scatter(
-            pos[:, 0], pos[:, 1], pos[:, 2],
+            pos_clean[:, 0], pos_clean[:, 1], pos_clean[:, 2],
             s=10,
             c=slice_weight,
             cmap=cm.viridis,
@@ -239,7 +433,7 @@ def visualize_car_and_slices(sample_idx, results_dir, model, dataset, args=None)
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
     total_weight = surf_weights.sum(axis=1)  # Sum weights across all slices for each point
-    scatter = ax.scatter(pos[:, 0], pos[:, 1], pos[:, 2], c=total_weight, cmap=cm.viridis, s=5, alpha=0.7)
+    scatter = ax.scatter(pos_clean[:, 0], pos_clean[:, 1], pos_clean[:, 2], c=total_weight, cmap=cm.viridis, s=5, alpha=0.7)
     cbar = plt.colorbar(scatter, ax=ax, shrink=0.7)
     cbar.set_label('Total Weight Across All Slices')
     ax.set_title(f'Combined Slice Weights - Sample {sample_idx}')
@@ -363,6 +557,10 @@ def visualize_car_and_slices(sample_idx, results_dir, model, dataset, args=None)
                           f'total_projections_{sample_idx}.png')
     else:
         print(f"Warning: Cannot create total weight projections - shape mismatch")
+
+    # === Create connected mesh visualizations with slice coloring ===
+    connected_mesh_path = os.path.join(vis_dir, f'connected_mesh_{sample_idx}.png')
+    create_complete_car_mesh_with_colored_slices(pos_clean, surf_weights, connected_mesh_path)
 
     print(f"Visualizations for sample {sample_idx} saved to {vis_dir}")
     
