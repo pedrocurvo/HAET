@@ -223,7 +223,7 @@ print(f"Loading model from: {path}")
 model = create_model(args)
 
 # Load checkpoint
-checkpoint_path = os.path.join(path, f'model_{args.nb_epochs}.pth')
+checkpoint_path = os.path.join(path, f'checkpoints/best_model.pth')
 checkpoint = torch.load(checkpoint_path, map_location=device)
 
 # Process state dict to remove "_orig_mod." prefix from keys (added by torch.compile)
