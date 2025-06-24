@@ -69,6 +69,7 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
         mp_steps=0,
         embed=False,
         memory_tokens=1,  # Number of memory tokens for eidetic states
+        attention_heads=1,  # Number of attention heads for eidetic states
     ):
         """Initialize the Physics_Attention_Structured_Mesh_2D module with Transolver++.
 
@@ -97,7 +98,8 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
             embed (bool): Whether to use ErwinEmbedding (True) or direct projection (False)
         """
         super().__init__()
-        inner_dim = dim_head * heads
+        self.attn_heads = attention_heads
+        inner_dim = dim_head * self.attn_heads
         self.dim_head = dim_head
         self.heads = heads
         self.H = H
@@ -110,8 +112,8 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
         self.memory_tokens = self.slice_num // 32
 
         # Memory tokens - learnable parameters
-        self.memory_states = nn.Parameter(torch.randn(1, heads, self.memory_tokens, dim_head))
-        init_pos = self.uniform_memory_positions(heads, self.memory_tokens, dimensionality).clone()
+        self.memory_states = nn.Parameter(torch.randn(1, self.attn_heads, self.memory_tokens, dim_head))
+        init_pos = self.uniform_memory_positions(self.attn_heads, self.memory_tokens, dimensionality).clone()
         self.memory_positions = nn.Parameter(init_pos)
         
         # Initialize memory tokens
@@ -122,13 +124,6 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
         # 2D Convolutional layer for spatial feature extraction
         # kernel_size=kernel, stride=1, padding=kernel//2 to maintain spatial dimensions
         self.in_project_x = nn.Conv2d(dim, inner_dim, kernel, 1, kernel // 2)
-
-        # Input positions for slicing - learn position representations
-        # self.pos_projector = nn.Sequential(
-        #     nn.Linear(dimensionality, dimensionality * heads),
-        #     nn.GELU(),
-        #     nn.Linear(dimensionality * heads, heads * self.dimensionality),
-        # )
         
         # Rep-Slice projection
         self.in_project_slice = nn.Linear(dim_head, slice_num)
@@ -145,7 +140,7 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
         if c_hidden is None:
             c_hidden = [dim_head, dim_head * 2]
         if ball_sizes is None:
-            ball_sizes = [min(32, slice_num), min(16, slice_num // 2)]
+            ball_sizes = [max(64, int(0.25 * slice_num)), max(64, int(0.25 * slice_num))]
         if enc_num_heads is None:
             enc_num_heads = [heads // 2, heads]
         if enc_depths is None:
@@ -218,6 +213,7 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
         """
         # Extract batch size, number of points, and channels
         B, N, C = x.shape
+        HEADS = 1
 
         # Reshape from flattened representation to 2D structured grid
         # [B, N, C] -> [B, H, W, C] -> [B, C, H, W] (for Conv2D input)
@@ -234,12 +230,12 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
             self.in_project_x(x)  # [B, inner_dim, H, W]
             .permute(0, 2, 3, 1)  # [B, H, W, inner_dim]
             .contiguous()
-            .reshape(B, N, self.heads, self.dim_head)  # [B, H*W, heads, dim_head]
+            .reshape(B, N, self.attn_heads, self.dim_head)  # [B, H*W, heads, dim_head]
             .permute(0, 2, 1, 3)  # [B, heads, H*W, dim_head]
             .contiguous()
         )
 
-        pos_proj = pos.view(B, N, 1, self.dimensionality).expand(B, N, self.heads, self.dimensionality).transpose(1, 2)
+        pos_proj = pos.view(B, N, 1, self.dimensionality).expand(B, N, self.attn_heads, self.dimensionality).transpose(1, 2)
 
         # Adaptive temperature
         tau = torch.clamp(self.base_temp + self.ada_temp_linear(self.ada_temp_norm(x_proj)), min=0.1, max=2.0)
@@ -284,5 +280,5 @@ class Physics_Attention_Structured_Mesh_2D(nn.Module):
 
         # Deslice - only use the slice tokens for output
         out = torch.matmul(slice_weights, updated_slices)  # [B, H, N, G] @ [B, H, G, D] = [B, H, N, D]
-        out = out.transpose(1, 2).reshape(B, N, self.heads * self.dim_head)  # [B, N, C]
+        out = out.transpose(1, 2).reshape(B, N, self.attn_heads * self.dim_head)  # [B, N, C]
         return self.to_out(out)
