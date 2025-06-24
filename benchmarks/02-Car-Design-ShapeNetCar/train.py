@@ -259,7 +259,7 @@ def main(device, train_dataset, val_dataset, Net, hparams, path, reg=1, val_iter
             "early_stopping_patience": 7,
             "gradient_clip_norm": 1.0,
             "amp_enabled": True,  # Log AMP usage
-        }
+        },
     )
     
     model = Net.to(device)
@@ -323,15 +323,15 @@ def main(device, train_dataset, val_dataset, Net, hparams, path, reg=1, val_iter
         total_nan_recoveries += epoch_nan_recoveries
         train_loss = loss_velo + reg * loss_press
 
-        # Save checkpoint after each epoch for NaN recovery
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'scheduler_state_dict': lr_scheduler.state_dict(),
-            'train_loss': train_loss,
-            'nan_recoveries': total_nan_recoveries,
-        }, str(checkpoint_path))
+        # # Save checkpoint after each epoch for NaN recovery
+        # torch.save({
+        #     'epoch': epoch,
+        #     'model_state_dict': model.state_dict(),
+        #     'optimizer_state_dict': optimizer.state_dict(),
+        #     'scheduler_state_dict': lr_scheduler.state_dict(),
+        #     'train_loss': train_loss,
+        #     'nan_recoveries': total_nan_recoveries,
+        # }, str(checkpoint_path))
 
         if val_iter is not None and (epoch == hparams['nb_epochs'] - 1 or epoch % val_iter == 0):
             # USE THE EXISTING VAL_LOADER

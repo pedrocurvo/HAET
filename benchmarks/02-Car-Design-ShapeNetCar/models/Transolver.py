@@ -69,7 +69,7 @@ class ErwinTransolver(nn.Module):
         self.erwin = ErwinTransformer(
             c_in=dim_head,
             c_hidden=[dim_head, dim_head*2],  # Two levels of hierarchy
-            ball_sizes=[min(32, slice_num), min(16, slice_num//2)],  # Progressive reduction
+            ball_sizes = [max(64, int(0.25 * slice_num)), max(64, int(0.25 * slice_num))],
             enc_num_heads=[heads, heads],
             enc_depths=[4, 4],
             dec_num_heads=[heads],
