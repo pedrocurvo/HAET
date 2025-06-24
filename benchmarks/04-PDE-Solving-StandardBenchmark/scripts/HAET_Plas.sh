@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_h100
+#SBATCH --partition=gpu_a100
 #SBATCH --gpus=1
-#SBATCH --job-name=plasticity
+#SBATCH --job-name=plas512
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --time=80:00:00
-#SBATCH --output=slurm_output/slurm_output_plasticity_training_%A.out
+#SBATCH --output=slurm_output/PLAS/%A.out
 
 module purge
 module load 2024
@@ -40,12 +40,12 @@ srun python exp_plas.py \
     --max_grad_norm 0.1 \
     --batch-size 8 \
     --n-hidden 256 \
-    --slice_num 512 \
+    --slice_num 1024 \
     --unified_pos 0 \
     --ref 8 \
     --eval 0 \
     --use_wandb 1 \
-    --save_name HAET_Plas_512
+    --save_name Plas1024
 
 echo "Experiment completed. Check the output files for results."
 

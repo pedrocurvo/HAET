@@ -2,11 +2,11 @@
 
 #SBATCH --partition=gpu_a100
 #SBATCH --gpus=1
-#SBATCH --job-name=HAET_exp_darcy_train
+#SBATCH --job-name=darcy1024
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=20:00:00
-#SBATCH --output=slurm_output/Darcy_train_slurm_output_%A.out
+#SBATCH --time=80:00:00
+#SBATCH --output=slurm_output/DARCY/%A.out
 
 module purge
 module load 2024
@@ -31,4 +31,4 @@ srun python exp_darcy.py \
     --eval 0 \
     --use_wandb 1 \
     --downsample 5 \
-    --save_name HAET_Darcy_1024
+    --save_name Darcy1024

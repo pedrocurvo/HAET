@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_h100
+#SBATCH --partition=gpu_a100
 #SBATCH --gpus=1
-#SBATCH --job-name=pipe
+#SBATCH --job-name=pipe1024
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --time=20:00:00
-#SBATCH --output=slurm_output/slurm_output_pipe_eval_%A.out
+#SBATCH --cpus-per-task=9
+#SBATCH --time=80:00:00
+#SBATCH --output=slurm_output/PIPE/%A.out
 
 module purge
 module load 2024
@@ -41,11 +41,11 @@ srun python exp_pipe.py \
     --max_grad_norm 0.1 \
     --batch-size 4 \
     --n-hidden 256 \
-    --slice_num 256 \
+    --slice_num 1024 \
     --unified_pos 0 \
     --ref 8 \
     --eval 0 \
     --use_wandb 1 \
-    --save_name HAET_Pipe_256
+    --save_name Pipe1024
 
 echo "Experiment completed. Check the output files for results."

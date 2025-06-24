@@ -2,11 +2,11 @@
 
 #SBATCH --partition=gpu_a100
 #SBATCH --gpus=1
-#SBATCH --job-name=elasticity
+#SBATCH --job-name=elas
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=20:00:00
-#SBATCH --output=slurm_output/slurm_output_elasticity_training_128_%A.out
+#SBATCH --time=100:00:00
+#SBATCH --output=slurm_output/ELAS/%A.out
 
 module purge
 module load 2024
@@ -39,13 +39,13 @@ srun python exp_elas.py \
     --n-layers 8 \
     --lr 0.001 \
     --max_grad_norm 0.1 \
-    --batch-size 16 \
+    --batch-size 4 \
     --n-hidden 256 \
-    --slice_num 1024 \
+    --slice_num 512 \
     --unified_pos 0 \
     --ref 8 \
     --eval 0 \
     --use_wandb 1 \
-    --save_name HAET_Elas_1024
+    --save_name Elas512
 
 echo "Experiment completed. Check the output files for results."

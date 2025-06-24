@@ -2,11 +2,11 @@
 
 #SBATCH --partition=gpu_a100
 #SBATCH --gpus=1
-#SBATCH --job-name=erwin
+#SBATCH --job-name=airfoil512__2
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=20:00:00
-#SBATCH --output=slurm_output/Airfoil_%A.out
+#SBATCH --time=80:00:00
+#SBATCH --output=slurm_output/AIRFOIL/%A.out
 
 module purge
 module load 2024
@@ -24,9 +24,9 @@ srun python exp_airfoil.py \
     --max_grad_norm 0.1 \
     --batch-size 4 \
     --n-hidden 256 \
-    --slice_num 256 \
+    --slice_num 1024 \
     --unified_pos 0 \
     --ref 8 \
     --eval 0 \
     --use_wandb 1 \
-    --save_name HAET_Airfoil_256
+    --save_name Airfoil1024
