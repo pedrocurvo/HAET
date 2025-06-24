@@ -63,6 +63,7 @@ class Physics_Attention_Irregular_Mesh(nn.Module):
         mp_steps=0,
         embed=False,
         memory_tokens=32,
+        attention_heads=1,
     ):
         """Initialize the Physics_Attention_Irregular_Mesh module with Transolver++.
 
@@ -88,9 +89,10 @@ class Physics_Attention_Irregular_Mesh(nn.Module):
             embed (bool): Whether to use ErwinEmbedding (True) or direct projection (False)
         """
         super().__init__()
-        inner_dim = dim_head * heads
+        self.attn_heads = attention_heads
         self.dim_head = dim_head
         self.heads = heads
+        inner_dim = dim_head * self.attn_heads  # Inner dimension for multi-head attention
         self.slice_num = slice_num
         self.dimensionality = dimensionality  # Spatial dimensionality for the irregular mesh
         self.epsilon = epsilon
@@ -98,8 +100,8 @@ class Physics_Attention_Irregular_Mesh(nn.Module):
         self.memory_tokens = self.slice_num // 32
 
         # Memory tokens - learnable parameters
-        self.memory_states = nn.Parameter(torch.randn(1, heads, self.memory_tokens, dim_head))
-        init_pos = self.uniform_memory_positions(heads, self.memory_tokens, dimensionality).clone()
+        self.memory_states = nn.Parameter(torch.randn(1, self.attn_heads, self.memory_tokens, dim_head))
+        init_pos = self.uniform_memory_positions(self.attn_heads, self.memory_tokens, dimensionality).clone()
         self.memory_positions = nn.Parameter(init_pos)
         
         # Initialize memory tokens
@@ -108,13 +110,6 @@ class Physics_Attention_Irregular_Mesh(nn.Module):
         
         # For Transolver++, we only need one projection to save memory
         self.in_project_x = nn.Linear(dim, inner_dim)
-
-        # # Input positions for slicing - learn position representations
-        # self.pos_projector = nn.Sequential(
-        #     nn.Linear(dimensionality, dimensionality * heads),
-        #     nn.GELU(),
-        #     nn.Linear(dimensionality * heads, heads * self.dimensionality),
-        # )
 
         # Rep-Slice projection
         self.in_project_slice = nn.Linear(dim_head, slice_num)
@@ -131,7 +126,7 @@ class Physics_Attention_Irregular_Mesh(nn.Module):
         if c_hidden is None:
             c_hidden = [dim_head, dim_head * 2]
         if ball_sizes is None:
-            ball_sizes = [min(32, slice_num), min(16, slice_num // 2)]
+            ball_sizes = [max(64, int(0.25 * slice_num)), max(64, int(0.25 * slice_num))]
         if enc_num_heads is None:
             enc_num_heads = [heads // 2, heads]
         if enc_depths is None:
@@ -210,15 +205,15 @@ class Physics_Attention_Irregular_Mesh(nn.Module):
         x_proj = (
             self.in_project_x(x)  # Linear projection [B, N, inner_dim]
             .reshape(
-                B, N, self.heads, self.dim_head
+                B, N, self.attn_heads, self.dim_head
             )  # Reshape for multi-head [B, N, H, C]
             .permute(0, 2, 1, 3)  # Reorder to [B, H, N, C]
             .contiguous()
         )
 
         # Project positions for slicing - learn position representations
-        pos_proj = pos.view(B, N, 1, self.dimensionality).expand(B, N, self.heads, self.dimensionality).transpose(1, 2)
-        
+        pos_proj = pos.view(B, N, 1, self.dimensionality).expand(B, N, self.attn_heads, self.dimensionality).transpose(1, 2)
+
         # Adaptive temperature
         tau = torch.clamp(self.base_temp + self.ada_temp_linear(self.ada_temp_norm(x_proj)), min=0.1, max=2.0)
 
@@ -262,5 +257,5 @@ class Physics_Attention_Irregular_Mesh(nn.Module):
 
         # Deslice - only use the slice tokens for output
         out = torch.matmul(slice_weights, updated_slices)  # [B, H, N, G] @ [B, H, G, D] = [B, H, N, D]
-        out = out.transpose(1, 2).reshape(B, N, self.heads * self.dim_head)  # [B, N, C]
+        out = out.transpose(1, 2).reshape(B, N, self.attn_heads * self.dim_head)  # [B, N, C]
         return self.to_out(out)
