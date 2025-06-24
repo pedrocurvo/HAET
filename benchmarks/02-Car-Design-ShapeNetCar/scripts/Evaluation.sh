@@ -18,10 +18,10 @@ module load CUDA/12.4.0
 cd $HOME/HAET/benchmarks/02-Car-Design-ShapeNetCar  
 
 srun python main_evaluation.py \
-    --cfd_model=ErwinTransolver500 \
+    --cfd_model=ErwinTransolverS32 \
     --data_dir data/shapenet_car/mlcfd_data/training_data \
     --save_dir data/shapenet_car/mlcfd_data/preprocessed_data \
     --nb_epochs 500 \
     --weight 0.5 \
-    --slice_num 32 \
-    --unified_pos 1
+    --unified_pos 0 \
+    --slice_num 32
