@@ -62,6 +62,9 @@ for i in range(args.nmodel):
                     slice_num=args.slice_num,
                     unified_pos=1).cuda()
 
+    # Compile model 
+    model = torch.compile(model)
+
     log_path = osp.join(args.save_path, args.task, args.model)  # path where you want to save log and figures
     print('start training')
     model = train.main(device, train_dataset, val_dataset, model, hparams, log_path,
