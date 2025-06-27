@@ -43,12 +43,12 @@ for task in tasks:
 
     # Compute the scores on the test set
 
-    model_names = ['Transolver']
+    model_names = ['HAET']
     models = []
     hparams = []
 
     for model in model_names:
-        model_path = osp.join(ckpt_root_dir, 'metrics', task, model, model)
+        model_path = osp.join(ckpt_root_dir, 'metrics', task, model, 'best_model.pth')
         mod = torch.load(model_path)
         print(mod)
         mod = [m.to(device) for m in mod]
