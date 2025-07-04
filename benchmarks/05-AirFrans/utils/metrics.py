@@ -17,6 +17,7 @@ import time
 import utils.metrics_NACA as metrics_NACA
 from utils.reorganize import reorganize
 from dataset.dataset import Dataset
+from torch.amp import autocast
 
 from tqdm import tqdm
 
@@ -93,9 +94,10 @@ def Infer_test(device, models, hparams, data, coef_norm=None):
             model.eval()
             data_sampled = data_sampled.to(device)
             start = time.time()
-            o = model(data_sampled)
+            with autocast(device_type='cuda', dtype=torch.bfloat16):
+                o = model(data_sampled)
             tim[n] += time.time() - start
-            out[n][idx] = o.cpu()
+            out[n][idx] = o.cpu().float()
 
             outs[n] = outs[n] + out[n]
         n_out[idx] = n_out[idx] + torch.ones_like(n_out[idx])
@@ -296,24 +298,23 @@ def Results_test(device, models, hparams, coef_norm, path_in, path_out, n_test=3
     times = []
     true_coefs = []
     pred_coefs = []
-    for i in range(len(models[0])):
-        model = [models[n][i] for n in range(len(models))]
-        avg_loss_per_var = np.zeros((len(model), 4))
-        avg_loss = np.zeros(len(model))
-        avg_loss_surf_var = np.zeros((len(model), 4))
-        avg_loss_vol_var = np.zeros((len(model), 4))
-        avg_loss_surf = np.zeros(len(model))
-        avg_loss_vol = np.zeros(len(model))
-        avg_rel_err_force = np.zeros((len(model), 2))
-        avg_loss_p = np.zeros((len(model)))
-        avg_loss_wss = np.zeros((len(model), 2))
+    for model in models:
+        avg_loss_per_var = np.zeros((1, 4))
+        avg_loss = np.zeros(1)
+        avg_loss_surf_var = np.zeros((1, 4))
+        avg_loss_vol_var = np.zeros((1, 4))
+        avg_loss_surf = np.zeros(1)
+        avg_loss_vol = np.zeros(1)
+        avg_rel_err_force = np.zeros((1, 2))
+        avg_loss_p = np.zeros(1)
+        avg_loss_wss = np.zeros((1, 2))
         internal = []
         airfoil = []
         pred_coef = []
 
         for j, data in enumerate(tqdm(test_loader)):
             Uinf, angle = float(test_dataset[j].split('_')[2]), float(test_dataset[j].split('_')[3])
-            outs, tim = Infer_test(device, model, hparams, data, coef_norm=coef_norm)
+            outs, tim = Infer_test(device, [model], hparams, data, coef_norm=coef_norm)
             times.append(tim)
             intern = pv.read(osp.join(path_in, test_dataset[j], test_dataset[j] + '_internal.vtu'))
             aerofoil = pv.read(osp.join(path_in, test_dataset[j], test_dataset[j] + '_aerofoil.vtp'))
@@ -322,16 +323,14 @@ def Results_test(device, models, hparams, coef_norm, path_in, path_out, n_test=3
             tc, true_intern, true_airfoil = tc[0], true_intern[0], true_airfoil[0]
             intern, aerofoil = Airfoil_test(intern, aerofoil, outs, coef_norm, data.surf)
             pc, intern, aerofoil = Compute_coefficients(intern, aerofoil, data.surf, Uinf, angle, keep_vtk=True)
-            if i == 0:
-                true_coefs.append(tc)
+            true_coefs.append(tc)
             pred_coef.append(pc)
 
             if j in idx:
                 internal.append(intern)
                 airfoil.append(aerofoil)
-                if i == 0:
-                    true_internals.append(true_intern)
-                    true_airfoils.append(true_airfoil)
+                true_internals.append(true_intern)
+                true_airfoils.append(true_airfoil)
 
             for n, out in enumerate(outs):
                 loss_per_var = criterion(out, data.y).mean(dim=0)

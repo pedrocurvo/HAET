@@ -49,14 +49,34 @@ for task in tasks:
 
     for model in model_names:
         model_path = osp.join(ckpt_root_dir, 'metrics', task, model, 'best_model.pth')
-        mod = torch.load(model_path)
-        print(mod)
-        mod = [m.to(device) for m in mod]
-        models.append(mod)
 
         with open('params.yaml', 'r') as f:
             hparam = yaml.safe_load(f)[model]
             hparams.append(hparam)
+
+        from models.Transolver import Model
+
+        # Instantiate your model
+        model_instance = Model(n_hidden=256,
+                    n_layers=8,
+                    space_dim=7,
+                    fun_dim=0,
+                    n_head=8,
+                    mlp_ratio=2,
+                    out_dim=4,
+                    slice_num=64,
+        unified_pos=1)
+
+        # Load checkpoint
+        checkpoint = torch.load(model_path, map_location=device)
+        state_dict = checkpoint['model_state_dict']
+        stripped_state_dict = {k.replace("_orig_mod.", ""): v for k, v in state_dict.items()}
+
+        model_instance.load_state_dict(stripped_state_dict)
+
+        model_instance.to(device)
+        model_instance.eval()
+        models.append(model_instance)
 
     results_dir = osp.join(ckpt_root_dir, 'scores', task)
     coefs = metrics.Results_test(device, models, hparams, coef_norm, data_dir, results_dir, n_test=3, criterion='MSE',
