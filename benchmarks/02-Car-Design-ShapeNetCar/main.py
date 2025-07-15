@@ -60,7 +60,7 @@ def parse_arguments():
     # Training parameters
     parser.add_argument('--weight', default=0.5, type=float,
                         help='Weight for regularization')
-    parser.add_argument('--lr', default=0.001, type=float,
+    parser.add_argument('--lr', default=0.0005, type=float,
                         help='Learning rate')
     parser.add_argument('--batch_size', default=1, type=int,
                         help='Batch size for training')
@@ -127,21 +127,18 @@ def create_model(args):
     Returns:
         torch.nn.Module: Initialized model
     """
-    if args.cfd_model == 'ErwinTransolverDefault':
-        model = Model(
-            n_hidden=args.n_hidden,
-            n_layers=args.n_layers,
-            space_dim=args.space_dim,
-            fun_dim=args.fun_dim,
-            n_head=args.n_head,
-            mlp_ratio=args.mlp_ratio,
-            out_dim=args.out_dim,
-            slice_num=args.slice_num,
-            radius=args.r,
-            unified_pos=args.unified_pos
-        ).cuda()
-    else:
-        raise ValueError(f"Unknown model type: {args.cfd_model}")
+    model = Model(
+        n_hidden=args.n_hidden,
+        n_layers=args.n_layers,
+        space_dim=args.space_dim,
+        fun_dim=args.fun_dim,
+        n_head=args.n_head,
+        mlp_ratio=args.mlp_ratio,
+        out_dim=args.out_dim,
+        slice_num=args.slice_num,
+        radius=args.r,
+        unified_pos=args.unified_pos
+    ).cuda()
     
     return model
 
@@ -163,6 +160,23 @@ def main():
     
     # Create the model
     model = create_model(args)
+    # # Load checkpoint
+    # path = f'metrics/{args.cfd_model}/{args.fold_id}/{args.nb_epochs}_{args.weight}'
+    # checkpoint_path = os.path.join(path, f'checkpoints/best_model.pth')
+    # checkpoint = torch.load(checkpoint_path, map_location=device)
+
+    # # Process state dict to remove "_orig_mod." prefix from keys (added by torch.compile)
+    # state_dict = checkpoint['model_state_dict']
+    # new_state_dict = {}
+    # for key, value in state_dict.items():
+    #     if key.startswith('_orig_mod.'):
+    #         new_key = key[len('_orig_mod.'):]
+    #         new_state_dict[new_key] = value
+    #     else:
+    #         new_state_dict[key] = value
+
+    # # Load the processed state dict
+    # model.load_state_dict(new_state_dict)
     
     # Create metrics directory
     if args.experiment_name:
@@ -180,6 +194,9 @@ def main():
     if hasattr(args, 'max_autotune') and args.max_autotune:
         print("Compiling model with max-autotune...")
         model = torch.compile(model, mode="max-autotune")
+    else:
+        print("Compiling model with default settings...")
+        model = torch.compile(model)
     
     # Train the model
     model = train.main(

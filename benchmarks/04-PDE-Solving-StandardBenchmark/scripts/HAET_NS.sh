@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_a100
+#SBATCH --partition=gpu_h100
 #SBATCH --gpus=1
-#SBATCH --job-name=pipe
+#SBATCH --job-name=ns
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --time=20:00:00
-#SBATCH --output=slurm_output/slurm_output_pipe_eval_%A.out
+#SBATCH --cpus-per-task=9
+#SBATCH --time=80:00:00
+#SBATCH --output=slurm_output/NS/%A.out
 
 module purge
 module load 2024
@@ -30,21 +30,22 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-echo "Running experiment on Pipe dataset"
+echo "Running experiment on Navier Stokes dataset"
 
-srun python exp_pipe.py \
+srun python exp_ns.py \
     --model HAETransolver_Structured_Mesh_2D \
-    --n-hidden 128 \
+    --epochs 1000 \
     --n-heads 8 \
     --n-layers 8 \
-    --mlp_ratio 2 \
     --lr 0.001 \
-    --max_grad_norm 0.1 \
     --batch-size 8 \
-    --slice_num 64 \
+    --n-hidden 256 \
+    --slice_num 1024 \
     --unified_pos 0 \
     --ref 8 \
-    --eval 1 \
-    --save_name pipe_HAETransolver
+    --eval 0 \
+    --use_wandb 1 \
+    --save_name NS1024
 
 echo "Experiment completed. Check the output files for results."
+

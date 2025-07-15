@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import torch.nn as nn
-from timm.models.layers import trunc_normal_
+from timm.layers import trunc_normal_
 from einops import rearrange, repeat
 
 ACTIVATION = {'gelu': nn.GELU, 'tanh': nn.Tanh, 'sigmoid': nn.Sigmoid, 'relu': nn.ReLU, 'leaky_relu': nn.LeakyReLU(0.1),
@@ -34,23 +34,42 @@ class ErwinTransolver(nn.Module):
         self.dimensionality = dimensionality
         self.epsilon = epsilon
         self.radius = radius    # Store the radius parameter
+        self.memory_tokens = self.slice_num // 32
+
+        # Memory tokens - learnable parameters
+        self.memory_states = nn.Parameter(torch.randn(1, heads, self.memory_tokens, dim_head))
+        init_pos = self.uniform_memory_positions(heads, self.memory_tokens, dimensionality).clone()
+        self.memory_positions = nn.Parameter(init_pos)
+        
+        # Initialize memory tokens
+        nn.init.xavier_uniform_(self.memory_states)
         
         # Input projections for slicing (just x, not fx to save 50% memory as per algorithm)
         self.in_project_x = nn.Linear(dim, inner_dim)
+
+        # Input positions for slicing - learn position representations
+        # self.pos_projector = nn.Sequential(
+        #     nn.Linear(dimensionality, dimensionality * heads),
+        #     nn.GELU(),
+        #     nn.Linear(dimensionality * heads, heads * self.dimensionality),
+        # )
         
         # Rep-Slice projection
         self.in_project_slice = nn.Linear(dim_head, slice_num)
+        self.in_project_slice._is_rep_slice = True  # Tag for custom init
         nn.init.orthogonal_(self.in_project_slice.weight)
         
         # Ada-Temp: Base temperature + adaptive component
         self.base_temp = base_temp
+        self.ada_temp_norm = nn.LayerNorm(dim_head)
         self.ada_temp_linear = nn.Linear(dim_head, 1)  # Adaptive temperature adjustment
+        self.ada_temp_linear._is_ada_temp = True
         
         # Erwin network for processing eidetic states
         self.erwin = ErwinTransformer(
             c_in=dim_head,
             c_hidden=[dim_head, dim_head*2],  # Two levels of hierarchy
-            ball_sizes=[min(32, slice_num), min(16, slice_num//2)],  # Progressive reduction
+            ball_sizes = [max(64, int(0.25 * slice_num)), max(64, int(0.25 * slice_num))],
             enc_num_heads=[heads, heads],
             enc_depths=[4, 4],
             dec_num_heads=[heads],
@@ -71,84 +90,85 @@ class ErwinTransolver(nn.Module):
         
         # Initialize slice weights attribute
         self.slice_weights = None
-        
+    
+    def uniform_memory_positions(self, heads, memory_tokens, dimensionality):
+        grid = torch.linspace(0, 1, steps=memory_tokens)
+        if dimensionality == 1:
+            base = grid
+        elif dimensionality == 2:
+            base = torch.stack(torch.meshgrid(grid, grid, indexing="ij"), dim=-1).view(-1, 2)
+        elif dimensionality == 3:
+            base = torch.stack(torch.meshgrid(grid, grid, grid, indexing="ij"), dim=-1).view(-1, 3)
+        else:
+            raise ValueError("Unsupported dimensionality")
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        base = base[:memory_tokens]  # Ensure size
+        base = base.unsqueeze(0).unsqueeze(0).expand(1, heads, -1, -1)  # [1, H, M, D]
+        return base
+
+    def gumbel_softmax_sample(self, logits, tau, training=True):
+        """Gumbel-Softmax sampling as in Eq. (4)"""
+        if training:
+            # Sample Gumbel noise
+            gumbel_noise = -torch.log(-torch.log(torch.rand_like(logits) + 1e-8) + 1e-8)
+            return torch.softmax((logits + gumbel_noise) / tau, dim=-1)
+        else:
+            return torch.softmax(logits / tau, dim=-1)
+
+    def forward(self, x: torch.Tensor, pos: torch.Tensor = None) -> torch.Tensor:
         """
         Implements Transolver++ Algorithm 1: Parallel Physics-Attention with Eidetic States
-        
-        Args:
-            x: Input tensor of shape (B, N, C) where:
-               B = batch size
-               N = number of points
-               C = number of channels/features
-        Returns:
-            Updated tensor of shape (B, N, C)
         """
         B, N, C = x.shape
-        
-        # Project input - note we don't compute fx separately to save memory
-        x_proj = self.in_project_x(x).reshape(B, N, self.heads, self.dim_head).permute(0, 2, 1, 3)
-        
-        # Compute adaptive temperature (Ada-Temp): τ = τ0 + Linear(xi)
-        # Implementation: τ(k) ←τ0 + Ada-Temp(x(k))
-        adaptive_temp = self.base_temp + self.ada_temp_linear(x_proj).clamp(min=-0.4, max=0.4)
-        
-        # Compute Rep-Slice: Softmax(Linear(x) - log(-log(ε))) / τ
-        # Implementation: w(k) ← Rep-Slice(x(k),τ(k))
-        log_neg_log_epsilon = torch.log(-torch.log(torch.tensor(self.epsilon, device=x.device)))
-        slice_logits = self.in_project_slice(x_proj) - log_neg_log_epsilon
-        slice_weights = torch.softmax(slice_logits / adaptive_temp, dim=2)
-        
-        # Store the slice weights for later access
-        self.slice_weights = slice_weights
-        
-        # Compute weights norm: w(k)_norm ← sum_i(w(k)_i)
-        slice_norm = slice_weights.sum(2, keepdim=True)
-        
-        # Compute eidetic states: s(k) ← w(k)T x(k) / w_norm
-        # We use x_proj both as x and f to save memory
-        eidetic_states = torch.einsum("bhnc,bhng->bhgc", x_proj, slice_weights)
-        eidetic_states = eidetic_states / (slice_norm.transpose(-1, -2) + 1e-5)  # [B, H, G, C]
-        
-        # Process eidetic states with Erwin (attention mechanism)
-        # This corresponds to: Update eidetic states s′← Attention(s)
-        B, H, G, C = eidetic_states.shape
-        
-        # Reshape for Erwin: [B, H, G, C] -> [B*H*G, C]
-        eidetic_states_flat = eidetic_states.reshape(B*H*G, C)
-        
-        # Use center of mass positions for eidetic states instead of random positions
-        # Since eidetic states are already weighted averages (center of mass) of the input features,
-        # we compute their spatial representation in the unit cube based on their relative positions
-        # in the feature space, normalized across each batch and head
-        
-        # Compute center of mass positions by normalizing features to unit cube
-        feat_min = eidetic_states_flat.min(dim=0, keepdim=True)[0]
-        feat_max = eidetic_states_flat.max(dim=0, keepdim=True)[0]
-        feat_range = feat_max - feat_min + 1e-8  # Add epsilon to avoid division by zero
-        
-        # Use first dimensionality components as spatial positions, normalized to [0,1]
-        pos = (eidetic_states_flat[:, :self.dimensionality] - feat_min[:, :self.dimensionality]) / feat_range[:, :self.dimensionality]
-        
-        # Create batch indices - each slice token needs its own batch index
-        batch_idx = torch.arange(B*H, device=x.device).repeat_interleave(G)
-        
-        # Add safety checks
-        assert eidetic_states_flat.shape[0] == pos.shape[0] == batch_idx.shape[0], \
-            f"Shapes mismatch: features {eidetic_states_flat.shape}, pos {pos.shape}, batch {batch_idx.shape}"
-        
-        # Process through Erwin
-        processed_states = self.erwin(eidetic_states_flat, pos, batch_idx, radius=self.radius)
-        
-        # Reshape back to original format [B, H, G, C]
-        processed_states = processed_states.reshape(B, H, G, C)
 
+        # Project input
+        x_proj = self.in_project_x(x).view(B, N, self.heads, self.dim_head).transpose(1, 2)  # [B, H, N, D]
+        pos_proj = pos.view(B, N, 1, self.dimensionality).expand(B, N, self.heads, self.dimensionality).transpose(1, 2)  # [B, H, N, D]
+
+        # Adaptive temperature
+        tau = torch.clamp(self.base_temp + self.ada_temp_linear(self.ada_temp_norm(x_proj)), min=0.1, max=2.0)
+
+        # Rep-Slice: Get raw logits and apply Gumbel-Softmax
+        raw_logits = self.in_project_slice(x_proj)  # [B, H, N, G]
+        slice_weights = self.gumbel_softmax_sample(raw_logits, tau, self.training)  # [B, H, N, G]
+
+        if not self.training:
+            self.slice_weights = slice_weights  # Save for inspection
+
+        # Normalize weights (for eidetic state computation)
+        norm = slice_weights.sum(2, keepdim=True)  # [B, H, 1, G]
+
+        # Eidetic state computation
+        eidetic_states = torch.matmul(slice_weights.transpose(-2, -1), x_proj) / (norm.transpose(-1, -2) + 1e-3)  # Increased epsilon
+        eidetic_pos = torch.matmul(slice_weights.transpose(-2, -1), pos_proj) / (norm.transpose(-1, -2) + 1e-3)
+
+        ### Add memory tokens to eidetic states
+        # Expand memory tokens to match batch size
+        memory_states_expanded = self.memory_states.expand(B, -1, -1, -1)  # [B, H, M, D]
+        memory_pos_expanded = self.memory_positions.expand(B, -1, -1, -1)  # [B, H, M, D_pos]
         
-        # Deslice back: x′(k) ← Deslice(s′, w(k))
-        out = torch.einsum("bhgc,bhng->bhnc", processed_states, slice_weights)
-        out = rearrange(out, 'b h n d -> b n (h d)')
+        # Concatenate memory tokens with eidetic states
+        eidetic_states = torch.cat([eidetic_states, memory_states_expanded], dim=2)  # [B, H, G+M, D]
+        eidetic_pos = torch.cat([eidetic_pos, memory_pos_expanded], dim=2)  # [B, H, G+M, D_pos]
+
+        ### (2) Transform eidetic states with ErwinTransformer
+        # Prepare for Erwin - now includes memory tokens
+        B, H, G_plus_M, D = eidetic_states.shape
+        states_flat = eidetic_states.reshape(B * H * G_plus_M, D)
+        pos_flat = eidetic_pos.reshape(B * H * G_plus_M, self.dimensionality)
+        batch_idx = torch.arange(B * H, device=x.device).repeat_interleave(G_plus_M)
+
+        # Erwin attention
+        updated = self.erwin(states_flat, pos_flat, batch_idx, radius=self.radius)
+        updated = updated.view(B, H, G_plus_M, D)
         
+        # Split back into slice tokens and memory tokens
+        updated_slices = updated[:, :, :self.slice_num, :]  # [B, H, G, D]
+        updated_memory = updated[:, :, self.slice_num:, :]  # [B, H, M, D]
+
+        # Deslice - only use the slice tokens for output
+        out = torch.matmul(slice_weights, updated_slices)  # [B, H, N, G] @ [B, H, G, D] = [B, H, N, D]
+        out = out.transpose(1, 2).reshape(B, N, self.heads * self.dim_head)  # [B, N, C]
         return self.to_out(out)
 
     def get_slice_weights(self):
@@ -210,8 +230,8 @@ class Transolver_block(nn.Module):
             self.ln_3 = nn.LayerNorm(hidden_dim)
             self.mlp2 = nn.Linear(hidden_dim, out_dim)
 
-    def forward(self, fx):
-        fx = self.Attn(self.ln_1(fx)) + fx
+    def forward(self, fx, pos=None):
+        fx = self.Attn(self.ln_1(fx), pos) + fx
         fx = self.mlp(self.ln_2(fx)) + fx
         if self.last_layer:
             return self.mlp2(self.ln_3(fx))
@@ -244,7 +264,7 @@ class Model(nn.Module):
         self.ref = ref
         self.unified_pos = unified_pos
         if self.unified_pos:
-            self.preprocess = MLP(fun_dim + self.ref * self.ref * self.ref, n_hidden * 2, n_hidden, n_layers=0,
+            self.preprocess = MLP(fun_dim + space_dim + self.ref * self.ref * self.ref, n_hidden * 2, n_hidden, n_layers=0,
                                   res=False, act=act)
         else:
             self.preprocess = MLP(fun_dim + space_dim, n_hidden * 2, n_hidden, n_layers=0, res=False, act=act)
@@ -269,8 +289,14 @@ class Model(nn.Module):
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
-            trunc_normal_(m.weight, std=0.02)
-            if isinstance(m, nn.Linear) and m.bias is not None:
+            if hasattr(m, 'weight') and m.weight is not None:
+                if getattr(m, '_is_rep_slice', False):
+                    nn.init.orthogonal_(m.weight)  # Special init for Rep-Slice
+                elif getattr(m, '_is_ada_temp', False):  # Add this
+                    nn.init.zeros_(m.weight)  # Start with no temperature adjustment
+                else:
+                    trunc_normal_(m.weight, std=0.02)
+            if m.bias is not None:
                 nn.init.constant_(m.bias, 0)
         elif isinstance(m, (nn.LayerNorm, nn.BatchNorm1d)):
             if hasattr(m, 'bias') and m.bias is not None:
@@ -300,6 +326,10 @@ class Model(nn.Module):
         cfd_data, geom_data = data
         x, fx, T = cfd_data.x, None, None
         x = x[None, :, :]
+        
+        # Store original position coordinates for use in attention
+        original_pos = cfd_data.pos[None, :, :] if hasattr(cfd_data, 'pos') and cfd_data.pos is not None else None
+        
         if self.unified_pos:
             new_pos = self.get_grid(cfd_data.pos[None, :, :])
             x = torch.cat((x, new_pos), dim=-1)
@@ -312,7 +342,7 @@ class Model(nn.Module):
             fx = fx + self.placeholder[None, None, :]
 
         for block in self.blocks:
-            fx = block(fx)
+            fx = block(fx, original_pos)
 
         return fx[0]
         

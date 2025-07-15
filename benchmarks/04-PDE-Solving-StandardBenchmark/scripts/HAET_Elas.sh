@@ -2,11 +2,11 @@
 
 #SBATCH --partition=gpu_a100
 #SBATCH --gpus=1
-#SBATCH --job-name=elasticity
+#SBATCH --job-name=elas
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --time=20:00:00
-#SBATCH --output=slurm_output/slurm_output_elasticity_training_128_%A.out
+#SBATCH --time=100:00:00
+#SBATCH --output=slurm_output/ELAS/%A.out
 
 module purge
 module load 2024
@@ -34,16 +34,18 @@ echo "Running experiment on Elasticity dataset"
 
 srun python exp_elas.py \
     --model HAETransolver_Irregular_Mesh \
-    --n-hidden 128 \
+    --epochs 500 \
     --n-heads 8 \
     --n-layers 8 \
     --lr 0.001 \
     --max_grad_norm 0.1 \
-    --batch-size 1 \
-    --slice_num 128 \
+    --batch-size 4 \
+    --n-hidden 256 \
+    --slice_num 512 \
     --unified_pos 0 \
     --ref 8 \
     --eval 0 \
-    --save_name elas_HAETransolver_128
+    --use_wandb 1 \
+    --save_name Elas512
 
 echo "Experiment completed. Check the output files for results."
