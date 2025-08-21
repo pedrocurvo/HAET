@@ -41,7 +41,9 @@ srun python exp_elas.py \
     --max_grad_norm 0.1 \
     --batch-size 4 \
     --n-hidden 256 \
-    --slice_num 512 \
+    --ball_size 512 \
+    --radius 1.0 \
+    --rotate 45 \
     --unified_pos 0 \
     --ref 8 \
     --eval 0 \

@@ -14,15 +14,17 @@ from .PhysicsAttention import Physics_Attention_Irregular_Mesh
 
 
 class TransolverErwinBlock(nn.Module):
-    """Transformer encoder block for irregular mesh processing.
+    """Transformer encoder block for irregular mesh processing with BallTree attention.
 
-    This block consists of a physics-informed attention mechanism followed by
-    an MLP, both with residual connections and layer normalization.
+    This block consists of a physics-informed BallTree attention mechanism followed by
+    an MLP, both with residual connections and layer normalization. The attention
+    mechanism uses spatial partitioning to group nearby points into balls and extracts
+    supernodes from each ball for efficient processing.
 
     Attributes:
         last_layer (bool): Flag indicating if this is the final layer in the network
         ln_1 (nn.LayerNorm): Layer normalization before attention
-        Attn (Physics_Attention_Irregular_Mesh): Physics-informed attention mechanism
+        Attn (Physics_Attention_Irregular_Mesh): BallTree-based physics attention mechanism
         ln_2 (nn.LayerNorm): Layer normalization before MLP
         mlp (MLP): Multi-layer perceptron for feature transformation
         ln_3 (nn.LayerNorm): Layer normalization in the last layer (if applicable)
@@ -38,7 +40,7 @@ class TransolverErwinBlock(nn.Module):
         mlp_ratio: int = 4,
         last_layer: bool = False,
         out_dim: int = 1,
-        slice_num: int = 32,
+        ball_size: int = 32,
         radius=1.0,
         dimensionality=1,
         # ErwinTransformer parameters
@@ -64,7 +66,9 @@ class TransolverErwinBlock(nn.Module):
             mlp_ratio: Expansion ratio for hidden dimension in MLP
             last_layer: Whether this is the final layer in the network
             out_dim: Output dimension (only used if last_layer=True)
-            slice_num: Number of slices for attention computation
+            ball_size: Number of points per ball/region for spatial partitioning
+            radius: Radius parameter for ErwinTransformer
+            dimensionality: Spatial dimensionality (1D, 2D, 3D)
             c_hidden: Hidden channel dimensions for each hierarchical level
             ball_sizes: Ball sizes for each hierarchical level
             enc_num_heads: Number of attention heads for each encoder level
@@ -85,7 +89,7 @@ class TransolverErwinBlock(nn.Module):
             heads=num_heads,
             dim_head=hidden_dim // num_heads,
             dropout=dropout,
-            slice_num=slice_num,
+            ball_size=ball_size,
             radius=radius,
             dimensionality=dimensionality,
             # Pass the ErwinTransformer parameters
@@ -139,11 +143,12 @@ class TransolverErwinBlock(nn.Module):
 
 
 class Model(nn.Module):
-    """Transolver model for irregular mesh data.
+    """Transolver model for irregular mesh data with BallTree-based attention.
 
-    This model uses a transformer-based architecture with physics-informed attention
-    to process irregular mesh data. It can handle spatial coordinates and optional
-    time inputs for time-dependent problems.
+    This model uses a transformer-based architecture with BallTree physics-informed attention
+    to process irregular mesh data. It partitions points into spatial balls and uses attention
+    to extract supernodes for efficient processing. The model can handle spatial coordinates 
+    and optional time inputs for time-dependent problems.
 
     Attributes:
         __name__ (str): Model identifier
@@ -170,7 +175,7 @@ class Model(nn.Module):
         mlp_ratio=1,
         fun_dim=1,
         out_dim=1,
-        slice_num=32,
+        ball_size=32,
         ref=8,
         unified_pos=False,
         # ErwinTransformer parameters
@@ -200,9 +205,10 @@ class Model(nn.Module):
             mlp_ratio: Expansion ratio for hidden dimension in MLP
             fun_dim: Dimension of input function values
             out_dim: Dimension of output
-            slice_num: Number of slices for attention computation
+            ball_size: Number of points per ball/region for spatial partitioning
             ref: Reference grid resolution
             unified_pos: Whether to use unified position encoding
+            radius: Radius parameter for ErwinTransformer
             c_hidden: Hidden channel dimensions for each hierarchical level in ErwinTransformer
             ball_sizes: Ball sizes for each hierarchical level in ErwinTransformer
             enc_num_heads: Number of attention heads for each encoder level in ErwinTransformer
@@ -254,7 +260,7 @@ class Model(nn.Module):
                     act=act,
                     mlp_ratio=mlp_ratio,
                     out_dim=out_dim,
-                    slice_num=slice_num,
+                    ball_size=ball_size,
                     last_layer=(_ == n_layers - 1),
                     dimensionality=space_dim,
                     # Pass the ErwinTransformer parameters
@@ -286,12 +292,7 @@ class Model(nn.Module):
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
             if hasattr(m, 'weight') and m.weight is not None:
-                if getattr(m, '_is_rep_slice', False):
-                    nn.init.orthogonal_(m.weight)  # Special init for Rep-Slice
-                elif getattr(m, '_is_ada_temp', False):  # Add this
-                    nn.init.zeros_(m.weight)  # Start with no temperature adjustment
-                else:
-                    trunc_normal_(m.weight, std=0.02)
+                trunc_normal_(m.weight, std=0.02)
             if m.bias is not None:
                 nn.init.constant_(m.bias, 0)
         elif isinstance(m, (nn.LayerNorm, nn.BatchNorm1d)):
@@ -382,7 +383,3 @@ class Model(nn.Module):
             fx = block(fx, pos=original_pos)
 
         return fx
-    
-    def get_last_block_slice_weights(self):
-        """Return the slice weights from the last transformer block."""
-        return self.blocks[-1].get_slice_weights()

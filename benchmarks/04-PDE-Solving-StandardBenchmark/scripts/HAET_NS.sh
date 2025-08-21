@@ -40,7 +40,9 @@ srun python exp_ns.py \
     --lr 0.001 \
     --batch-size 8 \
     --n-hidden 256 \
-    --slice_num 1024 \
+    --ball_size 1024 \
+    --radius 1.0 \
+    --rotate 45 \
     --unified_pos 0 \
     --ref 8 \
     --eval 0 \

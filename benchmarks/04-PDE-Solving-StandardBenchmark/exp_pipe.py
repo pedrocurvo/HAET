@@ -30,7 +30,9 @@ parser.add_argument('--mlp_ratio', type=int, default=1)
 parser.add_argument('--dropout', type=float, default=0.0)
 parser.add_argument('--unified_pos', type=int, default=0)
 parser.add_argument('--ref', type=int, default=8)
-parser.add_argument('--slice_num', type=int, default=32)
+parser.add_argument('--ball_size', type=int, default=32, help='Number of points per ball/region for spatial partitioning')
+parser.add_argument('--radius', type=float, default=1.0, help='Radius parameter for ErwinTransformer')
+parser.add_argument('--rotate', type=float, default=45, help='Rotation angle for geometric awareness')
 parser.add_argument('--eval', type=int, default=0)
 parser.add_argument('--save_name', type=str, default='pipe_UniPDE')
 parser.add_argument('--data_path', type=str, default='./data/pipe')
@@ -143,7 +145,9 @@ def main():
                             mlp_ratio=args.mlp_ratio,
                             fun_dim=0,
                             out_dim=1,
-                            slice_num=args.slice_num,
+                            ball_size=args.ball_size,
+                            radius=args.radius,
+                            rotate=args.rotate,
                             ref=args.ref,
                             unified_pos=args.unified_pos,
                             H=s1, W=s2).cuda()
