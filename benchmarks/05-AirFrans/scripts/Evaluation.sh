@@ -14,4 +14,4 @@ module load Anaconda3/2024.06-1
 module load 2023
 module load CUDA/12.4.0
 
-srun python main_evaluation.py --my_path ./data/
+srun python main_evaluation.py --my_path ./data/ --slice_num 512

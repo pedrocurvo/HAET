@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --partition=gpu_a100
+#SBATCH --partition=gpu_h100
 #SBATCH --gpus=1
 #SBATCH --job-name=airfrans
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=9
-#SBATCH --time=80:00:00
+#SBATCH --time=100:00:00
 #SBATCH --output=slurm_output/AIRFRANS/%A.out
 
 module purge
@@ -16,6 +16,6 @@ module load CUDA/12.4.0
 
 srun python main.py \
     --model HAET -t full \
-    --slice_num 64 \
+    --slice_num 32768 \
     --my_path ./data/Dataset \
     --score 1

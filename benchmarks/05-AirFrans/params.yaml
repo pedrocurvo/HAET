@@ -1,6 +1,6 @@
 HAET:
   batch_size: 1
-  nb_epochs: 398
+  nb_epochs: 400
   lr: 0.001
   max_neighbors: 64
   subsampling: 32000

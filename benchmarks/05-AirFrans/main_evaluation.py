@@ -9,6 +9,7 @@ import numpy as np
 parser = argparse.ArgumentParser()
 parser.add_argument('--my_path', default='/data/path', type=str)  # data save path
 parser.add_argument('--save_path', default='./', type=str)  # model save path
+parser.add_argument('--slice_num', default=1024, type=int, help='Number of slices for the model')
 args = parser.parse_args()
 
 # Compute the normalization used for the training
@@ -64,7 +65,7 @@ for task in tasks:
                     n_head=8,
                     mlp_ratio=2,
                     out_dim=4,
-                    slice_num=64,
+                    slice_num=args.slice_num,
         unified_pos=1)
 
         # Load checkpoint
