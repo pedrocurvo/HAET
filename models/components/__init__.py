@@ -21,10 +21,12 @@ from .embedding import (
     timestep_embedding,
 )
 from .erwinflash import ErwinTransformer as ErwinFlashTransformer
+from .erwin import ErwinTransformer
 from .mlp import MLP
 
 __all__ = [
     "MLP",
+    "ErwinTransformer",
     "ErwinFlashTransformer",
     "timestep_embedding",
     "rotate_half",

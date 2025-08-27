@@ -130,6 +130,7 @@ def main():
                             ball_size=args.ball_size,
                             radius=args.radius,
                             rotate=args.rotate,
+                            mp_steps=3,
                             ref=args.ref,
                             unified_pos=args.unified_pos).cuda()
 

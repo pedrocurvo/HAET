@@ -40,14 +40,15 @@ srun python exp_elas.py \
     --lr 0.001 \
     --max_grad_norm 0.1 \
     --batch-size 4 \
-    --n-hidden 256 \
-    --ball_size 512 \
+    --n-hidden 64 \
+    --ball_size 32 \
     --radius 1.0 \
     --rotate 45 \
     --unified_pos 0 \
     --ref 8 \
     --eval 0 \
     --use_wandb 1 \
-    --save_name Elas512
+    --save_name Elas512 \
+    --use_amp 0
 
 echo "Experiment completed. Check the output files for results."

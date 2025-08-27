@@ -130,7 +130,7 @@ class TransolverErwinBlock(nn.Module):
             or [batch_size, num_points, out_dim] if last_layer=True
         """
         # Apply attention with residual connection
-        fx = self.Attn(self.ln_1(fx), pos) + fx
+        fx = self.Attn(self.ln_1(fx), pos) # + fx
 
         # Apply MLP with residual connection
         fx = self.mlp(self.ln_2(fx)) + fx

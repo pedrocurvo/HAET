@@ -24,7 +24,7 @@ srun python exp_airfoil.py \
     --max_grad_norm 0.1 \
     --batch-size 4 \
     --n-hidden 256 \
-    --ball_size 1024 \
+    --ball_size 32 \
     --radius 1.0 \
     --rotate 45 \
     --unified_pos 0 \
